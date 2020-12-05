@@ -1,5 +1,6 @@
-package ru.kbakaras.confluence.publisher.adoc;
+package ru.kbakaras.cop.adoc;
 
+import org.asciidoctor.ast.Block;
 import org.asciidoctor.ast.ContentNode;
 import org.asciidoctor.ast.Document;
 import org.asciidoctor.ast.PhraseNode;
@@ -70,7 +71,7 @@ public class ConfluenceConverter extends StringConverter {
             builder.append("\n</tbody>");
             builder.append("\n</table>\n");
 
-            return  builder.toString();
+            return builder.toString();
 
         } else if (transform.equals("paragraph")) {
             StructuralNode block = (StructuralNode) node;
@@ -79,7 +80,15 @@ public class ConfluenceConverter extends StringConverter {
             return "<p>" + content.replaceAll(LINE_SEPARATOR, " ") + "</p>";
 
         } else if (transform.equals("preamble")) {
+
             return ((StructuralNode) node).getContent().toString();
+
+        } else if (transform.equals("image")) {
+            Block block = (Block) node;
+
+            return "<p><ac:image>\n" +
+                    "<ri:attachment ri:filename='" + block.getAttribute("target") + "'/>\n" +
+                    "</ac:image></p>";
         }
 
         return null;

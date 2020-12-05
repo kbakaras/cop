@@ -1,4 +1,4 @@
-package ru.kbakaras.confluence.publisher.adoc;
+package ru.kbakaras.cop.adoc;
 
 import org.asciidoctor.ast.ContentModel;
 import org.asciidoctor.ast.StructuralNode;

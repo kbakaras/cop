@@ -1,19 +1,27 @@
-package ru.kbakaras.confluence.publisher;
+package ru.kbakaras.cop;
 
 import lombok.SneakyThrows;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.http.HttpEntity;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.asciidoctor.Asciidoctor;
 import org.asciidoctor.OptionsBuilder;
 import org.asciidoctor.SafeMode;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
-import ru.kbakaras.confluence.publisher.adoc.ConfluenceConverter;
-import ru.kbakaras.confluence.publisher.dto.Content;
-import ru.kbakaras.confluence.publisher.dto.ContentBody;
-import ru.kbakaras.confluence.publisher.dto.ContentBodyValue;
-import ru.kbakaras.confluence.publisher.dto.ContentList;
+import ru.kbakaras.cop.adoc.ConfluenceConverter;
+import ru.kbakaras.cop.dto.Attachment;
+import ru.kbakaras.cop.dto.AttachmentList;
+import ru.kbakaras.cop.dto.Content;
+import ru.kbakaras.cop.dto.ContentBody;
+import ru.kbakaras.cop.dto.ContentBodyValue;
+import ru.kbakaras.cop.dto.ContentList;
 import ru.kbakaras.sugar.restclient.LoginPasswordDto;
 import ru.kbakaras.sugar.restclient.SugarRestClient;
 import ru.kbakaras.sugar.restclient.SugarRestIdentityBasic;
@@ -78,6 +86,7 @@ public class ConfluencePublisher implements Callable<Integer> {
         Asciidoctor asciidoctor = Asciidoctor.Factory.create();
         asciidoctor.javaConverterRegistry().register(ConfluenceConverter.class);
 
+        pageName = asciidoctor.readDocumentHeader(pageContentSource).getDocumentTitle().getMain();
         String pageContent = asciidoctor.convert(pageContentSource, OptionsBuilder.options()
                 .backend("confluence")
                 .toFile(false)
@@ -85,10 +94,13 @@ public class ConfluencePublisher implements Callable<Integer> {
 
         asciidoctor.shutdown();
 
+        Document doc = Jsoup.parse(pageContent);
+        Elements elements = doc.select("ac|image > ri|attachment");
+        //.attr("ri:filename")
 
         try (SugarRestClient client = new SugarRestClient(identity)) {
 
-            URIBuilder uriBuilder = new URIBuilder(baseUrl + "rest/api/content")
+            URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content")
                     .addParameter("spaceKey", spaceKey)
                     .addParameter("title", pageName)
                     .addParameter("expand", "space,body.view,body.storage,version,container");
@@ -97,6 +109,32 @@ public class ConfluencePublisher implements Callable<Integer> {
             response.assertStatusCode(200);
 
             Content oldContent = response.getEntity(ContentList.class).getResults()[0];
+
+
+            uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + oldContent.getId() + "/child/attachment");
+            response = client.get(uriBuilder.toString());
+            response.assertStatusCode(200);
+            AttachmentList attachmentList = response.getEntity(AttachmentList.class);
+
+            for (Attachment attachment: attachmentList.getResults()) {
+                uriBuilder = new URIBuilder(baseUrl + attachment.getLinks().getDownload());
+                response = client.get(uriBuilder.toString());
+                response.assertStatusCode(200);
+                response.getEntityData();
+                DigestUtils.sha1Hex(response.getEntityData());
+
+
+
+                uriBuilder = new URIBuilder(String.format(
+                        baseUrl + "/rest/api/content/%s/child/attachment/%s/data",
+                        oldContent.getId(), attachment.getId()));
+                HttpEntity entity = MultipartEntityBuilder
+                        .create()
+                        .addBinaryBody("file", response.getEntityData())
+                        .build();
+                response = client.post(uriBuilder.toString(), entity, "X-Atlassian-Token: nocheck");
+                response.assertStatusCode(200);
+            }
 
             /*String oldStorageContent = oldContent.getBody().getStorage().getValue();
 
@@ -123,7 +161,7 @@ public class ConfluencePublisher implements Callable<Integer> {
 
             content.setBody(contentBody);
 
-            uriBuilder = new URIBuilder(baseUrl + "rest/api/content/" + oldContent.getId());
+            uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + oldContent.getId());
 
             response = client.put(uriBuilder.toString(), content);
             response.assertStatusCode(200);
@@ -134,8 +172,8 @@ public class ConfluencePublisher implements Callable<Integer> {
     }
 
     private void normalizeBaseUrl() {
-        if (!baseUrl.endsWith("/")) {
-            baseUrl += "/";
+        if (baseUrl.endsWith("/")) {
+            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
         }
     }
 

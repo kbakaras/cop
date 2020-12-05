@@ -1,4 +1,4 @@
-package ru.kbakaras.confluence.publisher.dto;
+package ru.kbakaras.cop.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;

@@ -1,4 +1,4 @@
-package ru.kbakaras.confluence.publisher.dto;
+package ru.kbakaras.cop.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
@@ -9,12 +9,15 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ContentList {
+public class Content {
 
-    private Content[] results = new Content[0];
+    private String id;
+    private String type;
+    private String status;
+    private String title;
 
-    private int start;
-    private int limit;
-    private int size;
+    private ContentVersion version;
+
+    private ContentBody body;
 
 }

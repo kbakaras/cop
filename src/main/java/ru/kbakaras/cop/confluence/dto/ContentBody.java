@@ -1,4 +1,4 @@
-package ru.kbakaras.cop.dto;
+package ru.kbakaras.cop.confluence.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
@@ -9,15 +9,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Content {
+public class ContentBody {
 
-    private String id;
-    private String type;
-    private String status;
-    private String title;
-
-    private ContentVersion version;
-
-    private ContentBody body;
+    private ContentBodyValue view;
+    private ContentBodyValue storage;
 
 }

@@ -1,12 +1,7 @@
 package ru.kbakaras.cop;
 
 import lombok.SneakyThrows;
-import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.http.HttpEntity;
-import org.apache.http.client.utils.URIBuilder;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.asciidoctor.Asciidoctor;
 import org.asciidoctor.OptionsBuilder;
 import org.asciidoctor.SafeMode;
@@ -16,20 +11,28 @@ import org.jsoup.select.Elements;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 import ru.kbakaras.cop.adoc.ConfluenceConverter;
-import ru.kbakaras.cop.dto.Attachment;
-import ru.kbakaras.cop.dto.AttachmentList;
-import ru.kbakaras.cop.dto.Content;
-import ru.kbakaras.cop.dto.ContentBody;
-import ru.kbakaras.cop.dto.ContentBodyValue;
-import ru.kbakaras.cop.dto.ContentList;
+import ru.kbakaras.cop.adoc.model.ImageDestination;
+import ru.kbakaras.cop.adoc.model.ImageSource;
+import ru.kbakaras.cop.confluence.ConfluenceApi;
+import ru.kbakaras.cop.confluence.dto.Attachment;
+import ru.kbakaras.cop.confluence.dto.Content;
+import ru.kbakaras.cop.confluence.dto.ContentBody;
+import ru.kbakaras.cop.confluence.dto.ContentBodyValue;
+import ru.kbakaras.cop.confluence.dto.ContentList;
 import ru.kbakaras.sugar.restclient.LoginPasswordDto;
 import ru.kbakaras.sugar.restclient.SugarRestClient;
 import ru.kbakaras.sugar.restclient.SugarRestIdentityBasic;
+import ru.kbakaras.sugar.utils.CollectionUpdater;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.stream.Stream;
 
 @CommandLine.Command(
         name = "Confluence Publisher",
@@ -53,9 +56,11 @@ public class ConfluencePublisher implements Callable<Integer> {
     @Option(names = {"-s", "--space"}, description = "Target space", required = true)
     private String spaceKey;
 
+    @SuppressWarnings("unused")
     @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show usage help")
     private boolean showUsage;
 
+    @SuppressWarnings("unused")
     @Option(names = { "-V", "--version" }, versionHelp = true, description = "Show version information")
     private boolean versionRequested;
 
@@ -64,77 +69,65 @@ public class ConfluencePublisher implements Callable<Integer> {
     @Override
     public Integer call() throws Exception {
 
-        normalizeBaseUrl();
+        String pageContentSource = readPageContentSource();
 
-        if (!file.exists()) {
-            throw new IllegalArgumentException(MessageFormat.format("File %s not found", file));
-        }
-        String pageName = FilenameUtils.removeExtension(file.getName());
-
-
-        SugarRestIdentityBasic identity = new SugarRestIdentityBasic() {
-
-            @Override
-            public LoginPasswordDto getLoginAndPassword() {
-                return new LoginPasswordDto(login, password);
-            }
-
-        };
-
-        String pageContentSource = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
-
+        // region Конвертация документа в формат хранения Confluence
         Asciidoctor asciidoctor = Asciidoctor.Factory.create();
         asciidoctor.javaConverterRegistry().register(ConfluenceConverter.class);
 
-        pageName = asciidoctor.readDocumentHeader(pageContentSource).getDocumentTitle().getMain();
+        String pageTitle = asciidoctor.readDocumentHeader(pageContentSource).getDocumentTitle().getMain();
         String pageContent = asciidoctor.convert(pageContentSource, OptionsBuilder.options()
                 .backend("confluence")
                 .toFile(false)
                 .safe(SafeMode.UNSAFE));
 
         asciidoctor.shutdown();
+        // endregion
 
+        // region Stream с исходными (публикуемыми) изображениями
+        File imageDir = file.getParentFile();
         Document doc = Jsoup.parse(pageContent);
         Elements elements = doc.select("ac|image > ri|attachment");
-        //.attr("ri:filename")
-
-        try (SugarRestClient client = new SugarRestClient(identity)) {
-
-            URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content")
-                    .addParameter("spaceKey", spaceKey)
-                    .addParameter("title", pageName)
-                    .addParameter("expand", "space,body.view,body.storage,version,container");
-
-            SugarRestClient.Response response = client.get(uriBuilder.toString());
-            response.assertStatusCode(200);
-
-            Content oldContent = response.getEntity(ContentList.class).getResults()[0];
+        Stream<ImageSource> sourceImages = elements
+                .stream()
+                .map(element -> element.attr("ri:filename"))
+                .map(fileName -> new File(imageDir, fileName))
+                .map(ImageSource::new);
+        // endregion
 
 
-            uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + oldContent.getId() + "/child/attachment");
-            response = client.get(uriBuilder.toString());
-            response.assertStatusCode(200);
-            AttachmentList attachmentList = response.getEntity(AttachmentList.class);
+        try (SugarRestClient client = clientWithIdentity()) {
+            ConfluenceApi api = new ConfluenceApi(baseUrl, spaceKey, client);
 
-            for (Attachment attachment: attachmentList.getResults()) {
-                uriBuilder = new URIBuilder(baseUrl + attachment.getLinks().getDownload());
-                response = client.get(uriBuilder.toString());
-                response.assertStatusCode(200);
-                response.getEntityData();
-                DigestUtils.sha1Hex(response.getEntityData());
+            ContentList contentList = api.findContentByTitle(pageTitle);
 
-
-
-                uriBuilder = new URIBuilder(String.format(
-                        baseUrl + "/rest/api/content/%s/child/attachment/%s/data",
-                        oldContent.getId(), attachment.getId()));
-                HttpEntity entity = MultipartEntityBuilder
-                        .create()
-                        .addBinaryBody("file", response.getEntityData())
-                        .build();
-                response = client.post(uriBuilder.toString(), entity, "X-Atlassian-Token: nocheck");
-                response.assertStatusCode(200);
+            // TODO Где-то должна быть логика, решающая обновление или создание
+            if (contentList.getSize() != 1) {
+                throw new RuntimeException("Обновление не возможно");
             }
+
+            Content oldContent = contentList.getResults()[0];
+
+            List<ImageDestination> destinationImages = new ArrayList<>();
+            for (Attachment attachment : api.findAttachmentByContentId(oldContent.getId()).getResults()) {
+                destinationImages.add(new ImageDestination(attachment, api.getAttachmentData(attachment)));
+            }
+
+            new CollectionUpdater<ImageDestination, ImageSource, String>(id -> id.name, is -> is.name)
+
+                    .check4Changes((id, is) -> !id.sha1.equals(is.sha1))
+
+                    .updateElement((id, is) -> {
+                        try {
+                            api.updateAttachmentData(oldContent.getId(), id.attachment, is.data);
+                        } catch (URISyntaxException | IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    })
+
+                    .collection(destinationImages, sourceImages);
+
+            if (true) return 0;
 
             /*String oldStorageContent = oldContent.getBody().getStorage().getValue();
 
@@ -161,20 +154,31 @@ public class ConfluencePublisher implements Callable<Integer> {
 
             content.setBody(contentBody);
 
-            uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + oldContent.getId());
-
-            response = client.put(uriBuilder.toString(), content);
-            response.assertStatusCode(200);
+            api.updateContent(oldContent.getId(), content);
 
             return 0;
         }
 
     }
 
-    private void normalizeBaseUrl() {
-        if (baseUrl.endsWith("/")) {
-            baseUrl = baseUrl.substring(0, baseUrl.length() - 1);
+    private String readPageContentSource() throws IOException {
+
+        if (!file.exists()) {
+            throw new IllegalArgumentException(MessageFormat.format("File %s not found", file));
         }
+
+        return FileUtils.readFileToString(file, StandardCharsets.UTF_8);
+    }
+
+    private SugarRestClient clientWithIdentity() {
+        return new SugarRestClient(new SugarRestIdentityBasic() {
+
+            @Override
+            public LoginPasswordDto getLoginAndPassword() {
+                return new LoginPasswordDto(login, password);
+            }
+
+        });
     }
 
 

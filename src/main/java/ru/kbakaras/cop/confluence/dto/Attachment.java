@@ -1,4 +1,4 @@
-package ru.kbakaras.cop.dto;
+package ru.kbakaras.cop.confluence.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

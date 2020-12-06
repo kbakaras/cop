@@ -9,10 +9,11 @@ import ru.kbakaras.cop.confluence.dto.Content;
 import ru.kbakaras.cop.confluence.dto.ContentList;
 import ru.kbakaras.sugar.restclient.SugarRestClient;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
-public class ConfluenceApi {
+public class ConfluenceApi implements Closeable {
 
     private final String baseUrl;
     private final String spaceKey;
@@ -33,9 +34,26 @@ public class ConfluenceApi {
                 .addParameter("expand", "space,body.view,body.storage,version,container");
 
         SugarRestClient.Response response = client.get(uriBuilder.toString());
-        response.assertStatusCode(200);
 
+        response.assertStatusCode(200);
         return response.getEntity(ContentList.class);
+    }
+
+    /**
+     * Получить страницу по идентификатору. Если страница по указанному идентификатору отсутствует, возвращает null.
+     */
+    public Content getContentById(String contentId) throws URISyntaxException, IOException {
+        URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + contentId)
+                .addParameter("expand", "body.storage,version,container");
+
+        SugarRestClient.Response response = client.get(uriBuilder.toString());
+
+        if (response.httpResponse.getStatusLine().getStatusCode() == 404) {
+            return null;
+        }
+
+        response.assertStatusCode(200);
+        return response.getEntity(Content.class);
     }
 
     public AttachmentList findAttachmentByContentId(String contentId) throws URISyntaxException, IOException {
@@ -83,6 +101,12 @@ public class ConfluenceApi {
         return url.endsWith("/")
                 ? url.substring(0, url.length() - 1)
                 : url;
+    }
+
+
+    @Override
+    public void close() {
+        client.close();
     }
 
 }

@@ -7,38 +7,42 @@ import org.asciidoctor.OptionsBuilder;
 import org.asciidoctor.SafeMode;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 import ru.kbakaras.cop.adoc.ConfluenceConverter;
-import ru.kbakaras.cop.adoc.model.ImageDestination;
 import ru.kbakaras.cop.adoc.model.ImageSource;
+import ru.kbakaras.cop.adoc.model.PageSource;
 import ru.kbakaras.cop.confluence.ConfluenceApi;
-import ru.kbakaras.cop.confluence.dto.Attachment;
+import ru.kbakaras.cop.confluence.dto.Ancestor;
 import ru.kbakaras.cop.confluence.dto.Content;
 import ru.kbakaras.cop.confluence.dto.ContentBody;
 import ru.kbakaras.cop.confluence.dto.ContentBodyValue;
-import ru.kbakaras.cop.confluence.dto.ContentList;
+import ru.kbakaras.cop.confluence.dto.Space;
 import ru.kbakaras.sugar.restclient.LoginPasswordDto;
 import ru.kbakaras.sugar.restclient.SugarRestClient;
 import ru.kbakaras.sugar.restclient.SugarRestIdentityBasic;
-import ru.kbakaras.sugar.utils.CollectionUpdater;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
-import java.util.stream.Stream;
 
 @CommandLine.Command(
         name = "Confluence Publisher",
         version = "0.0.1",
+        mixinStandardHelpOptions = true,
         sortOptions = false,
-        showDefaultValues = true)
+        showDefaultValues = true,
+        subcommands = {
+                PublishCommand.class,
+                UpdateCommand.class
+        }
+)
 public class ConfluencePublisher implements Callable<Integer> {
 
     @Option(names = {"-b", "--base-url"}, description = "Base url for Confluence", required = true)
@@ -54,22 +58,42 @@ public class ConfluencePublisher implements Callable<Integer> {
     private File file;
 
     @Option(names = {"-s", "--space"}, description = "Target space", required = true)
-    private String spaceKey;
+    String spaceKey;
 
-    @SuppressWarnings("unused")
-    @Option(names = {"-h", "--help"}, usageHelp = true, description = "Show usage help")
-    private boolean showUsage;
-
-    @SuppressWarnings("unused")
-    @Option(names = { "-V", "--version" }, versionHelp = true, description = "Show version information")
-    private boolean versionRequested;
+    @Option(names = {"-r", "--parent-id"}, description = "Confluence's parent page id")
+    String parentId;
 
 
     @SneakyThrows
     @Override
     public Integer call() throws Exception {
+        throw new IllegalArgumentException("Operation not supported yet");
+    }
 
-        String pageContentSource = readPageContentSource();
+
+    void setContentValue(Content content, PageSource pageSource) {
+        content.setTitle(pageSource.title);
+        content.setType(Content.TYPE_Page);
+
+        content.setSpace(new Space(spaceKey));
+        Optional.ofNullable(parentId)
+                .map(id -> new Ancestor[]{new Ancestor(id)})
+                .ifPresent(content::setAncestors);
+
+        ContentBodyValue contentValue = new ContentBodyValue(pageSource.content, ContentBodyValue.REPRESENTATION_Storage);
+        ContentBody contentBody = new ContentBody();
+        contentBody.setStorage(contentValue);
+
+        content.setBody(contentBody);
+    }
+
+    PageSource convertPageSource() throws IOException {
+
+        if (!file.exists()) {
+            throw new IllegalArgumentException(MessageFormat.format("File %s not found", file));
+        }
+
+        String pageContentSource = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
 
         // region Конвертация документа в формат хранения Confluence
         Asciidoctor asciidoctor = Asciidoctor.Factory.create();
@@ -84,101 +108,33 @@ public class ConfluencePublisher implements Callable<Integer> {
         asciidoctor.shutdown();
         // endregion
 
-        // region Stream с исходными (публикуемыми) изображениями
+
         File imageDir = file.getParentFile();
         Document doc = Jsoup.parse(pageContent);
         Elements elements = doc.select("ac|image > ri|attachment");
-        Stream<ImageSource> sourceImages = elements
-                .stream()
-                .map(element -> element.attr("ri:filename"))
-                .map(fileName -> new File(imageDir, fileName))
-                .map(ImageSource::new);
-        // endregion
 
-
-        try (SugarRestClient client = clientWithIdentity()) {
-            ConfluenceApi api = new ConfluenceApi(baseUrl, spaceKey, client);
-
-            ContentList contentList = api.findContentByTitle(pageTitle);
-
-            // TODO Где-то должна быть логика, решающая обновление или создание
-            if (contentList.getSize() != 1) {
-                throw new RuntimeException("Обновление не возможно");
-            }
-
-            Content oldContent = contentList.getResults()[0];
-
-            List<ImageDestination> destinationImages = new ArrayList<>();
-            for (Attachment attachment : api.findAttachmentByContentId(oldContent.getId()).getResults()) {
-                destinationImages.add(new ImageDestination(attachment, api.getAttachmentData(attachment)));
-            }
-
-            new CollectionUpdater<ImageDestination, ImageSource, String>(id -> id.name, is -> is.name)
-
-                    .check4Changes((id, is) -> !id.sha1.equals(is.sha1))
-
-                    .updateElement((id, is) -> {
-                        try {
-                            api.updateAttachmentData(oldContent.getId(), id.attachment, is.data);
-                        } catch (URISyntaxException | IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    })
-
-                    .collection(destinationImages, sourceImages);
-
-            if (true) return 0;
-
-            /*String oldStorageContent = oldContent.getBody().getStorage().getValue();
-
-
-
-            String storageContent = IOUtils.toString(
-                    ClassLoader.getSystemResourceAsStream("content.html"),
-                    StandardCharsets.UTF_8);
-
-            if (oldStorageContent.equals(storageContent)) {
-                return;
-            }*/
-
-            Content content = new Content();
-            content.setVersion(oldContent.getVersion());
-            content.getVersion().setNumber(content.getVersion().getNumber() + 1);
-
-            content.setTitle(oldContent.getTitle());
-            content.setType("page");
-
-            ContentBodyValue contentValue = new ContentBodyValue(pageContent, "storage");
-            ContentBody contentBody = new ContentBody();
-            contentBody.setStorage(contentValue);
-
-            content.setBody(contentBody);
-
-            api.updateContent(oldContent.getId(), content);
-
-            return 0;
+        ArrayList<ImageSource> images = new ArrayList<>();
+        for (Element element : elements) {
+            File imageFile = new File(imageDir, element.attr("ri:filename"));
+            images.add(new ImageSource(imageFile));
+            element.attr("ri:filename", imageFile.getName());
         }
+
+        return new PageSource(pageTitle, doc.body().html(), images);
 
     }
 
-    private String readPageContentSource() throws IOException {
+    ConfluenceApi confluenceApi() {
+        return new ConfluenceApi(baseUrl, spaceKey,
+                new SugarRestClient(new SugarRestIdentityBasic() {
 
-        if (!file.exists()) {
-            throw new IllegalArgumentException(MessageFormat.format("File %s not found", file));
-        }
+                    @Override
+                    public LoginPasswordDto getLoginAndPassword() {
+                        return new LoginPasswordDto(login, password);
+                    }
 
-        return FileUtils.readFileToString(file, StandardCharsets.UTF_8);
-    }
-
-    private SugarRestClient clientWithIdentity() {
-        return new SugarRestClient(new SugarRestIdentityBasic() {
-
-            @Override
-            public LoginPasswordDto getLoginAndPassword() {
-                return new LoginPasswordDto(login, password);
-            }
-
-        });
+                })
+        );
     }
 
 

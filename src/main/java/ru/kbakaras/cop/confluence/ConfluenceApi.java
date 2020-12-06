@@ -2,6 +2,7 @@ package ru.kbakaras.cop.confluence;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import ru.kbakaras.cop.confluence.dto.Attachment;
 import ru.kbakaras.cop.confluence.dto.AttachmentList;
@@ -9,10 +10,11 @@ import ru.kbakaras.cop.confluence.dto.Content;
 import ru.kbakaras.cop.confluence.dto.ContentList;
 import ru.kbakaras.sugar.restclient.SugarRestClient;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.URISyntaxException;
 
-public class ConfluenceApi {
+public class ConfluenceApi implements Closeable {
 
     private final String baseUrl;
     private final String spaceKey;
@@ -33,9 +35,26 @@ public class ConfluenceApi {
                 .addParameter("expand", "space,body.view,body.storage,version,container");
 
         SugarRestClient.Response response = client.get(uriBuilder.toString());
-        response.assertStatusCode(200);
 
+        response.assertStatusCode(200);
         return response.getEntity(ContentList.class);
+    }
+
+    /**
+     * Получить страницу по идентификатору. Если страница по указанному идентификатору отсутствует, возвращает null.
+     */
+    public Content getContentById(String contentId) throws URISyntaxException, IOException {
+        URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + contentId)
+                .addParameter("expand", "body.storage,version,container");
+
+        SugarRestClient.Response response = client.get(uriBuilder.toString());
+
+        if (response.httpResponse.getStatusLine().getStatusCode() == 404) {
+            return null;
+        }
+
+        response.assertStatusCode(200);
+        return response.getEntity(Content.class);
     }
 
     public AttachmentList findAttachmentByContentId(String contentId) throws URISyntaxException, IOException {
@@ -44,8 +63,8 @@ public class ConfluenceApi {
                 contentId));
 
         SugarRestClient.Response response = client.get(uriBuilder.toString());
-        response.assertStatusCode(200);
 
+        response.assertStatusCode(200);
         return response.getEntity(AttachmentList.class);
     }
 
@@ -53,8 +72,8 @@ public class ConfluenceApi {
         URIBuilder uriBuilder = new URIBuilder(baseUrl + attachment.getLinks().getDownload());
 
         SugarRestClient.Response response = client.get(uriBuilder.toString());
-        response.assertStatusCode(200);
 
+        response.assertStatusCode(200);
         return response.getEntityData();
     }
 
@@ -68,6 +87,20 @@ public class ConfluenceApi {
                 .build();
 
         SugarRestClient.Response response = client.post(uriBuilder.toString(), entity, "X-Atlassian-Token: nocheck");
+
+        response.assertStatusCode(200);
+    }
+
+    public void createAttachment(String contentId, String fileName, byte[] data) throws URISyntaxException, IOException {
+        URIBuilder uriBuilder = new URIBuilder(String.format(
+                baseUrl + "/rest/api/content/%s/child/attachment", contentId));
+        HttpEntity entity = MultipartEntityBuilder
+                .create()
+                .addBinaryBody("file", data, ContentType.IMAGE_PNG, fileName)
+                .build();
+
+        SugarRestClient.Response response = client.post(uriBuilder.toString(), entity, "X-Atlassian-Token: nocheck");
+
         response.assertStatusCode(200);
     }
 
@@ -75,7 +108,17 @@ public class ConfluenceApi {
         URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + contentId);
 
         SugarRestClient.Response response = client.put(uriBuilder.toString(), content);
+
         response.assertStatusCode(200);
+    }
+
+    public Content createContent(Content content) throws URISyntaxException, IOException {
+        URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content");
+
+        SugarRestClient.Response response = client.post(uriBuilder.toString(), content);
+
+        response.assertStatusCode(200);
+        return response.getEntity(Content.class);
     }
 
 
@@ -83,6 +126,12 @@ public class ConfluenceApi {
         return url.endsWith("/")
                 ? url.substring(0, url.length() - 1)
                 : url;
+    }
+
+
+    @Override
+    public void close() {
+        client.close();
     }
 
 }

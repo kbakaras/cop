@@ -11,12 +11,19 @@ import lombok.NoArgsConstructor;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Content {
 
+    public static final String TYPE_Page      = "page";
+    public static final String STATUS_Current = "current";
+
     private String id;
     private String type;
     private String status;
     private String title;
 
+    private Space space;
+
     private ContentVersion version;
+
+    private Ancestor[] ancestors;
 
     private ContentBody body;
 

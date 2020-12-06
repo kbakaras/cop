@@ -7,6 +7,7 @@ import org.asciidoctor.OptionsBuilder;
 import org.asciidoctor.SafeMode;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
@@ -14,6 +15,11 @@ import ru.kbakaras.cop.adoc.ConfluenceConverter;
 import ru.kbakaras.cop.adoc.model.ImageSource;
 import ru.kbakaras.cop.adoc.model.PageSource;
 import ru.kbakaras.cop.confluence.ConfluenceApi;
+import ru.kbakaras.cop.confluence.dto.Ancestor;
+import ru.kbakaras.cop.confluence.dto.Content;
+import ru.kbakaras.cop.confluence.dto.ContentBody;
+import ru.kbakaras.cop.confluence.dto.ContentBodyValue;
+import ru.kbakaras.cop.confluence.dto.Space;
 import ru.kbakaras.sugar.restclient.LoginPasswordDto;
 import ru.kbakaras.sugar.restclient.SugarRestClient;
 import ru.kbakaras.sugar.restclient.SugarRestIdentityBasic;
@@ -22,8 +28,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
+import java.util.ArrayList;
+import java.util.Optional;
 import java.util.concurrent.Callable;
-import java.util.stream.Stream;
 
 @CommandLine.Command(
         name = "Confluence Publisher",
@@ -51,10 +58,10 @@ public class ConfluencePublisher implements Callable<Integer> {
     private File file;
 
     @Option(names = {"-s", "--space"}, description = "Target space", required = true)
-    private String spaceKey;
+    String spaceKey;
 
     @Option(names = {"-r", "--parent-id"}, description = "Confluence's parent page id")
-    private String parentId;
+    String parentId;
 
 
     @SneakyThrows
@@ -63,6 +70,22 @@ public class ConfluencePublisher implements Callable<Integer> {
         throw new IllegalArgumentException("Operation not supported yet");
     }
 
+
+    void setContentValue(Content content, PageSource pageSource) {
+        content.setTitle(pageSource.title);
+        content.setType(Content.TYPE_Page);
+
+        content.setSpace(new Space(spaceKey));
+        Optional.ofNullable(parentId)
+                .map(id -> new Ancestor[]{new Ancestor(id)})
+                .ifPresent(content::setAncestors);
+
+        ContentBodyValue contentValue = new ContentBodyValue(pageSource.content, ContentBodyValue.REPRESENTATION_Storage);
+        ContentBody contentBody = new ContentBody();
+        contentBody.setStorage(contentValue);
+
+        content.setBody(contentBody);
+    }
 
     PageSource convertPageSource() throws IOException {
 
@@ -85,19 +108,20 @@ public class ConfluencePublisher implements Callable<Integer> {
         asciidoctor.shutdown();
         // endregion
 
-        return new PageSource(pageTitle, pageContent);
 
-    }
-
-    Stream<ImageSource> findSourceImages(String pageContent) {
         File imageDir = file.getParentFile();
         Document doc = Jsoup.parse(pageContent);
         Elements elements = doc.select("ac|image > ri|attachment");
-        return elements
-                .stream()
-                .map(element -> element.attr("ri:filename"))
-                .map(fileName -> new File(imageDir, fileName))
-                .map(ImageSource::new);
+
+        ArrayList<ImageSource> images = new ArrayList<>();
+        for (Element element : elements) {
+            File imageFile = new File(imageDir, element.attr("ri:filename"));
+            images.add(new ImageSource(imageFile));
+            element.attr("ri:filename", imageFile.getName());
+        }
+
+        return new PageSource(pageTitle, doc.body().html(), images);
+
     }
 
     ConfluenceApi confluenceApi() {

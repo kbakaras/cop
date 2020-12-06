@@ -2,6 +2,7 @@ package ru.kbakaras.cop.confluence;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import ru.kbakaras.cop.confluence.dto.Attachment;
 import ru.kbakaras.cop.confluence.dto.AttachmentList;
@@ -62,8 +63,8 @@ public class ConfluenceApi implements Closeable {
                 contentId));
 
         SugarRestClient.Response response = client.get(uriBuilder.toString());
-        response.assertStatusCode(200);
 
+        response.assertStatusCode(200);
         return response.getEntity(AttachmentList.class);
     }
 
@@ -71,8 +72,8 @@ public class ConfluenceApi implements Closeable {
         URIBuilder uriBuilder = new URIBuilder(baseUrl + attachment.getLinks().getDownload());
 
         SugarRestClient.Response response = client.get(uriBuilder.toString());
-        response.assertStatusCode(200);
 
+        response.assertStatusCode(200);
         return response.getEntityData();
     }
 
@@ -86,6 +87,20 @@ public class ConfluenceApi implements Closeable {
                 .build();
 
         SugarRestClient.Response response = client.post(uriBuilder.toString(), entity, "X-Atlassian-Token: nocheck");
+
+        response.assertStatusCode(200);
+    }
+
+    public void createAttachment(String contentId, String fileName, byte[] data) throws URISyntaxException, IOException {
+        URIBuilder uriBuilder = new URIBuilder(String.format(
+                baseUrl + "/rest/api/content/%s/child/attachment", contentId));
+        HttpEntity entity = MultipartEntityBuilder
+                .create()
+                .addBinaryBody("file", data, ContentType.IMAGE_PNG, fileName)
+                .build();
+
+        SugarRestClient.Response response = client.post(uriBuilder.toString(), entity, "X-Atlassian-Token: nocheck");
+
         response.assertStatusCode(200);
     }
 
@@ -93,7 +108,17 @@ public class ConfluenceApi implements Closeable {
         URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + contentId);
 
         SugarRestClient.Response response = client.put(uriBuilder.toString(), content);
+
         response.assertStatusCode(200);
+    }
+
+    public Content createContent(Content content) throws URISyntaxException, IOException {
+        URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content");
+
+        SugarRestClient.Response response = client.post(uriBuilder.toString(), content);
+
+        response.assertStatusCode(200);
+        return response.getEntity(Content.class);
     }
 
 

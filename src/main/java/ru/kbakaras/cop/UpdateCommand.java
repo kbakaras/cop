@@ -7,8 +7,6 @@ import ru.kbakaras.cop.adoc.model.PageSource;
 import ru.kbakaras.cop.confluence.ConfluenceApi;
 import ru.kbakaras.cop.confluence.dto.Attachment;
 import ru.kbakaras.cop.confluence.dto.Content;
-import ru.kbakaras.cop.confluence.dto.ContentBody;
-import ru.kbakaras.cop.confluence.dto.ContentBodyValue;
 import ru.kbakaras.cop.confluence.dto.ContentList;
 import ru.kbakaras.sugar.utils.CollectionUpdater;
 
@@ -68,16 +66,7 @@ public class UpdateCommand implements Callable<Integer> {
             Content content = new Content();
             content.setVersion(oldContent.getVersion());
             content.getVersion().setNumber(content.getVersion().getNumber() + 1);
-
-            content.setTitle(oldContent.getTitle());
-            content.setType("page");
-
-            ContentBodyValue contentValue = new ContentBodyValue(pageSource.content, "storage");
-            ContentBody contentBody = new ContentBody();
-            contentBody.setStorage(contentValue);
-
-            content.setBody(contentBody);
-
+            parent.setContentValue(content, pageSource);
             api.updateContent(oldContent.getId(), content);
             // endregion
 
@@ -92,6 +81,14 @@ public class UpdateCommand implements Callable<Integer> {
 
                     .check4Changes((id, is) -> !id.sha1.equals(is.sha1))
 
+                    .createElement(is -> {
+                        try {
+                            api.createAttachment(oldContent.getId(), is.name, is.data);
+                        } catch (URISyntaxException | IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    })
+
                     .updateElement((id, is) -> {
                         try {
                             api.updateAttachmentData(oldContent.getId(), id.attachment, is.data);
@@ -100,7 +97,7 @@ public class UpdateCommand implements Callable<Integer> {
                         }
                     })
 
-                    .collection(destinationImages, parent.findSourceImages(pageSource.content));
+                    .collection(destinationImages, pageSource.imageSourceList);
             // endregion
 
         }

@@ -1,13 +1,13 @@
 package ru.kbakaras.cop;
 
 import picocli.CommandLine;
-import ru.kbakaras.cop.adoc.model.ImageDestination;
-import ru.kbakaras.cop.adoc.model.ImageSource;
-import ru.kbakaras.cop.adoc.model.PageSource;
 import ru.kbakaras.cop.confluence.ConfluenceApi;
 import ru.kbakaras.cop.confluence.dto.Attachment;
 import ru.kbakaras.cop.confluence.dto.Content;
 import ru.kbakaras.cop.confluence.dto.ContentList;
+import ru.kbakaras.cop.model.ImageDestination;
+import ru.kbakaras.cop.model.ImageSource;
+import ru.kbakaras.cop.model.PageSource;
 import ru.kbakaras.sugar.utils.CollectionUpdater;
 
 import java.io.IOException;

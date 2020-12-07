@@ -1,10 +1,10 @@
 package ru.kbakaras.cop;
 
 import picocli.CommandLine;
-import ru.kbakaras.cop.adoc.model.PageSource;
 import ru.kbakaras.cop.confluence.ConfluenceApi;
 import ru.kbakaras.cop.confluence.dto.Content;
 import ru.kbakaras.cop.confluence.dto.ContentList;
+import ru.kbakaras.cop.model.PageSource;
 
 import java.io.IOException;
 import java.net.URISyntaxException;

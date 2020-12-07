@@ -1,4 +1,4 @@
-package ru.kbakaras.cop.adoc.model;
+package ru.kbakaras.cop.model;
 
 import lombok.RequiredArgsConstructor;
 

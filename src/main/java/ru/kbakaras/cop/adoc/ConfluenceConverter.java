@@ -65,7 +65,7 @@ public class ConfluenceConverter extends StringConverter {
                     builder.append(cell.getText());
                     builder.append("</td>\n");
                 });
-                builder.append("</tr>");
+                builder.append("</tr>\n");
             });
 
             builder.append("\n</tbody>");
@@ -77,7 +77,7 @@ public class ConfluenceConverter extends StringConverter {
             StructuralNode block = (StructuralNode) node;
             String content = block.getContent().toString();
 
-            return "<p>" + content.replaceAll(LINE_SEPARATOR, " ") + "</p>";
+            return "<p>" + content.replaceAll(LINE_SEPARATOR, " ") + "</p>\n";
 
         } else if (transform.equals("preamble")) {
 
@@ -86,9 +86,11 @@ public class ConfluenceConverter extends StringConverter {
         } else if (transform.equals("image")) {
             Block block = (Block) node;
 
-            return "<p><ac:image>\n" +
+            return "<p>\n" +
+                    "<ac:image>\n" +
                     "<ri:attachment ri:filename='" + block.getAttribute("target") + "'/>\n" +
-                    "</ac:image></p>";
+                    "</ac:image>\n" +
+                    "</p>\n";
         }
 
         return null;

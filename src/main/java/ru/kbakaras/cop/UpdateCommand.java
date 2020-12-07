@@ -1,5 +1,7 @@
 package ru.kbakaras.cop;
 
+import org.apache.commons.codec.digest.DigestUtils;
+import org.jsoup.Jsoup;
 import picocli.CommandLine;
 import ru.kbakaras.cop.confluence.ConfluenceApi;
 import ru.kbakaras.cop.confluence.dto.Attachment;
@@ -63,11 +65,14 @@ public class UpdateCommand implements Callable<Integer> {
 
 
             // region Обновление основного содержимого страницы
-            Content content = new Content();
-            content.setVersion(oldContent.getVersion());
-            content.getVersion().setNumber(content.getVersion().getNumber() + 1);
-            parent.setContentValue(content, pageSource);
-            api.updateContent(oldContent.getId(), content);
+            String sha1 = DigestUtils.sha1Hex(Jsoup.parseBodyFragment(oldContent.getBody().getStorage().getValue()).body().html());
+            if (!pageSource.sha1.equals(sha1)) {
+                Content content = new Content();
+                content.setVersion(oldContent.getVersion());
+                content.getVersion().setNumber(content.getVersion().getNumber() + 1);
+                parent.setContentValue(content, pageSource);
+                api.updateContent(oldContent.getId(), content);
+            }
             // endregion
 
 

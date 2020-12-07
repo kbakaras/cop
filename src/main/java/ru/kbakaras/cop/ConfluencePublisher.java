@@ -110,7 +110,7 @@ public class ConfluencePublisher implements Callable<Integer> {
 
 
         File imageDir = file.getParentFile();
-        Document doc = Jsoup.parse(pageContent);
+        Document doc = Jsoup.parseBodyFragment(pageContent);
         Elements elements = doc.select("ac|image > ri|attachment");
 
         ArrayList<ImageSource> images = new ArrayList<>();

@@ -104,12 +104,13 @@ public class ConfluenceApi implements Closeable {
         response.assertStatusCode(200);
     }
 
-    public void updateContent(String contentId, Content content) throws URISyntaxException, IOException {
+    public Content updateContent(String contentId, Content content) throws URISyntaxException, IOException {
         URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + contentId);
 
         SugarRestClient.Response response = client.put(uriBuilder.toString(), content);
 
         response.assertStatusCode(200);
+        return response.getEntity(Content.class);
     }
 
     public Content createContent(Content content) throws URISyntaxException, IOException {

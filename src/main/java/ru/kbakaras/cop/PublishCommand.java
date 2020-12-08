@@ -1,5 +1,6 @@
 package ru.kbakaras.cop;
 
+import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import ru.kbakaras.cop.confluence.ConfluenceApi;
 import ru.kbakaras.cop.confluence.dto.Content;
@@ -15,6 +16,7 @@ import java.util.concurrent.Callable;
         mixinStandardHelpOptions = true,
         header = "Operation for initial publication of page to Confluence"
 )
+@Slf4j
 public class PublishCommand implements Callable<Integer> {
 
     @CommandLine.ParentCommand
@@ -42,7 +44,11 @@ public class PublishCommand implements Callable<Integer> {
             // region Создание страницы
             Content content = new Content();
             parent.setContentValue(content, pageSource);
+
             Content newContent = api.createContent(content);
+            if (!pageSource.sha1.equals(newContent.sha1())) {
+                log.warn("SHA1 of published content differs from converted, check converter");
+            }
             // endregion
 
 

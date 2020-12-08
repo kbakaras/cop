@@ -51,8 +51,12 @@ public class ConfluencePublisher implements Callable<Integer> {
     @Option(names = {"-l", "--login"}, description = "Confluence user login", required = true)
     private String login;
 
-    @Option(names = {"-p", "--password"}, description = "Confluence user password", required = true)
-    private String password;
+    @Option(names = {"-p", "--password"},
+            description = "Confluence user password",
+            required = true,
+            arity = "0..1",
+            interactive = true)
+    private char[] password;
 
     @Option(names = {"-f", "--file"}, description = "Path to file with page to publish", required = true)
     private File file;
@@ -130,7 +134,7 @@ public class ConfluencePublisher implements Callable<Integer> {
 
                     @Override
                     public LoginPasswordDto getLoginAndPassword() {
-                        return new LoginPasswordDto(login, password);
+                        return new LoginPasswordDto(login, String.valueOf(password));
                     }
 
                 })

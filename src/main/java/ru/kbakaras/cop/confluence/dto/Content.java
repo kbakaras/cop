@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.apache.commons.codec.digest.DigestUtils;
+import org.jsoup.Jsoup;
 
 @Data
 @NoArgsConstructor
@@ -26,5 +28,10 @@ public class Content {
     private Ancestor[] ancestors;
 
     private ContentBody body;
+
+
+    public String sha1() {
+        return DigestUtils.sha1Hex(Jsoup.parseBodyFragment(body.getStorage().getValue()).body().html());
+    }
 
 }

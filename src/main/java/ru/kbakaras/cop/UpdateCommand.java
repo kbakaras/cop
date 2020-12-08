@@ -1,7 +1,6 @@
 package ru.kbakaras.cop;
 
-import org.apache.commons.codec.digest.DigestUtils;
-import org.jsoup.Jsoup;
+import lombok.extern.slf4j.Slf4j;
 import picocli.CommandLine;
 import ru.kbakaras.cop.confluence.ConfluenceApi;
 import ru.kbakaras.cop.confluence.dto.Attachment;
@@ -23,6 +22,7 @@ import java.util.concurrent.Callable;
         mixinStandardHelpOptions = true,
         header = "Operation to update previously published page"
 )
+@Slf4j
 public class UpdateCommand implements Callable<Integer> {
 
     @CommandLine.ParentCommand
@@ -65,13 +65,16 @@ public class UpdateCommand implements Callable<Integer> {
 
 
             // region Обновление основного содержимого страницы
-            String sha1 = DigestUtils.sha1Hex(Jsoup.parseBodyFragment(oldContent.getBody().getStorage().getValue()).body().html());
-            if (!pageSource.sha1.equals(sha1)) {
+            if (!pageSource.sha1.equals(oldContent.sha1())) {
                 Content content = new Content();
                 content.setVersion(oldContent.getVersion());
                 content.getVersion().setNumber(content.getVersion().getNumber() + 1);
                 parent.setContentValue(content, pageSource);
-                api.updateContent(oldContent.getId(), content);
+
+                content = api.updateContent(oldContent.getId(), content);
+                if (!pageSource.sha1.equals(content.sha1())) {
+                    log.warn("SHA1 of updated content differs from converted, check converter");
+                }
             }
             // endregion
 

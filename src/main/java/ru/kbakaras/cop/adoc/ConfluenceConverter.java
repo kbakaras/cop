@@ -58,6 +58,16 @@ public class ConfluenceConverter extends StringConverter {
             builder.append("<table>\n");
             builder.append("<tbody>\n");
 
+            table.getHeader().forEach(row -> {
+                builder.append("<tr>\n");
+                row.getCells().forEach(cell -> {
+                    builder.append("<th>");
+                    builder.append(cell.getText());
+                    builder.append("</th>\n");
+                });
+                builder.append("</tr>\n");
+            });
+
             table.getBody().forEach(row -> {
                 builder.append("<tr>\n");
                 row.getCells().forEach(cell -> {

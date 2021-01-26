@@ -1,6 +1,7 @@
 package ru.kbakaras.cop.adoc;
 
 import org.asciidoctor.ast.Block;
+import org.asciidoctor.ast.Column;
 import org.asciidoctor.ast.ContentNode;
 import org.asciidoctor.ast.Document;
 import org.asciidoctor.ast.PhraseNode;
@@ -11,6 +12,8 @@ import org.asciidoctor.converter.ConverterFor;
 import org.asciidoctor.converter.StringConverter;
 
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @ConverterFor("confluence")
 public class ConfluenceConverter extends StringConverter {
@@ -55,7 +58,14 @@ public class ConfluenceConverter extends StringConverter {
             Table table = (Table) node;
 
             StringBuilder builder = new StringBuilder();
-            builder.append("<table>\n");
+            builder.append("<table class=\"wrapped relative-table\" style=\"" + formatWidth(table.getAttribute("width")) + "\">\n");
+
+            builder.append("<colgroup>");
+            for (Column column : table.getColumns()) {
+                builder.append("<col style=\"" + formatWidth(column.getWidth()) + "\"></col>");
+            }
+            builder.append("</colgroup>");
+
             builder.append("<tbody>\n");
 
             table.getHeader().forEach(row -> {
@@ -105,5 +115,22 @@ public class ConfluenceConverter extends StringConverter {
 
         return null;
     }
+
+
+    private static String formatWidth(int width) {
+        return String.format("width: %d.0%%; ", width);
+    }
+
+    private static String formatWidth(Object width) {
+
+        Matcher matcher = PATTERN_WIDTH.matcher(width.toString());
+        if (matcher.matches()) {
+            return formatWidth(Integer.parseInt(matcher.group(1)));
+        } else {
+            throw new IllegalArgumentException(String.format("Некорректное значение ширины: %s", width));
+        }
+    }
+
+    private static final Pattern PATTERN_WIDTH = Pattern.compile("(\\d+)%?");
 
 }

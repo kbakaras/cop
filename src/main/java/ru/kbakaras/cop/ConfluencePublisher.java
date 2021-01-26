@@ -5,10 +5,10 @@ import org.apache.commons.io.FileUtils;
 import org.asciidoctor.Asciidoctor;
 import org.asciidoctor.OptionsBuilder;
 import org.asciidoctor.SafeMode;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
+import org.htmlcleaner.CleanerProperties;
+import org.htmlcleaner.HtmlCleaner;
+import org.htmlcleaner.PrettyXmlSerializer;
+import org.htmlcleaner.TagNode;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 import ru.kbakaras.cop.adoc.ConfluenceConverter;
@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
@@ -112,20 +113,29 @@ public class ConfluencePublisher implements Callable<Integer> {
         asciidoctor.shutdown();
         // endregion
 
+        HtmlCleaner cleaner = new HtmlCleaner();
+
+        CleanerProperties props = cleaner.getProperties();
+        props.setOmitHtmlEnvelope(true);
+        props.setOmitXmlDeclaration(true);
+
+        TagNode node = cleaner.clean(pageContent);
+
 
         File imageDir = file.getParentFile();
-        Document doc = Jsoup.parseBodyFragment(pageContent);
-        Elements elements = doc.select("ac|image > ri|attachment");
-
         ArrayList<ImageSource> images = new ArrayList<>();
-        for (Element element : elements) {
-            File imageFile = new File(imageDir, element.attr("ri:filename"));
+        List<? extends TagNode> imageNodes = node.getElementList(
+                tagNode -> tagNode.getName().equals("ri:attachment") && tagNode.getParent().getName().equals("ac:image"),
+                true);
+
+        for (TagNode imageNode: imageNodes) {
+            File imageFile = new File(imageDir, imageNode.getAttributeByName("ri:filename"));
             images.add(new ImageSource(imageFile));
-            element.attr("ri:filename", imageFile.getName());
+            imageNode.removeAttribute("ri:filename");
+            imageNode.addAttribute("ri:filename", imageFile.getName());
         }
 
-        return new PageSource(pageTitle, doc.body().html(), images);
-
+        return new PageSource(pageTitle, new PrettyXmlSerializer(cleaner.getProperties()).getAsString(node), images);
     }
 
     ConfluenceApi confluenceApi() {

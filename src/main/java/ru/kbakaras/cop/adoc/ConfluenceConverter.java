@@ -3,7 +3,11 @@ package ru.kbakaras.cop.adoc;
 import org.asciidoctor.ast.Block;
 import org.asciidoctor.ast.Column;
 import org.asciidoctor.ast.ContentNode;
+import org.asciidoctor.ast.DescriptionList;
+import org.asciidoctor.ast.DescriptionListEntry;
 import org.asciidoctor.ast.Document;
+import org.asciidoctor.ast.List;
+import org.asciidoctor.ast.ListItem;
 import org.asciidoctor.ast.PhraseNode;
 import org.asciidoctor.ast.Section;
 import org.asciidoctor.ast.StructuralNode;
@@ -50,6 +54,8 @@ public class ConfluenceConverter extends StringConverter {
                     return "<i>" + phrase.getText() + "</i>";
                 case "strong":
                     return "<b>" + phrase.getText() + "</b>";
+                case "monospaced":
+                    return "<pre>" + phrase.getText() + "</pre>";
                 default:
                     return phrase.getText();
             }
@@ -111,6 +117,43 @@ public class ConfluenceConverter extends StringConverter {
                     "<ri:attachment ri:filename='" + block.getAttribute("target") + "'/>\n" +
                     "</ac:image>\n" +
                     "</p>\n";
+
+        } else if (transform.equals("dlist")) {
+
+            DescriptionList dlist = (DescriptionList) node;
+
+            StringBuilder builder = new StringBuilder();
+            for (DescriptionListEntry entry : dlist.getItems()) {
+                builder.append("<p>")
+                        .append("<strong>")
+                        .append(entry.getTerms().get(0).getText())
+                        .append("</strong>")
+                        .append("<br/>")
+                        .append(entry.getDescription().convert())
+                        .append("</p>");
+            }
+            return builder.toString();
+
+        } else if (transform.equals("ulist")) {
+
+            List list = (List) node;
+
+            StringBuilder builder = new StringBuilder();
+            builder.append("<ul>");
+            for (StructuralNode listItem : list.getItems()) {
+                builder.append("<li>");
+                builder.append(listItem.convert());
+                builder.append("</li>");
+            }
+            builder.append("</ul>");
+
+            return builder.toString();
+
+        } else if (transform.equals("list_item")) {
+
+            ListItem item = (ListItem) node;
+            return item.hasText() ? item.getText() : item.getContent().toString();
+
         }
 
         return null;

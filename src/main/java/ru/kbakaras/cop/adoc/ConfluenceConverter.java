@@ -16,6 +16,7 @@ import org.asciidoctor.converter.ConverterFor;
 import org.asciidoctor.converter.StringConverter;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -56,6 +57,8 @@ public class ConfluenceConverter extends StringConverter {
                     return "<b>" + phrase.getText() + "</b>";
                 case "monospaced":
                     return "<pre>" + phrase.getText() + "</pre>";
+                case "link":
+                    return "<a href='" + phrase.getTarget() + "'>" + phrase.getReftext() + "</a>";
                 default:
                     return phrase.getText();
             }
@@ -63,41 +66,47 @@ public class ConfluenceConverter extends StringConverter {
         } else if (node instanceof Table) {
             Table table = (Table) node;
 
-            StringBuilder builder = new StringBuilder();
-            builder.append("<table class=\"wrapped relative-table\" style=\"" + formatWidth(table.getAttribute("width")) + "\">\n");
+            StringBuilder tableBuilder = new StringBuilder();
+            tableBuilder.append("<table class='wrapped relative-table'");
+            Optional.ofNullable(table.getAttribute("width"))
+                    .map(ConfluenceConverter::formatWidth)
+                    .map(width -> String.format(" style='%s'", width))
+                    .ifPresent(tableBuilder::append);
+            tableBuilder.append(">");
 
-            builder.append("<colgroup>");
+            tableBuilder.append("<colgroup>");
             for (Column column : table.getColumns()) {
-                builder.append("<col style=\"" + formatWidth(column.getWidth()) + "\"></col>");
+                tableBuilder.append("<col style='" + formatWidth(column.getWidth()) + "'></col>");
             }
-            builder.append("</colgroup>");
+            tableBuilder.append("</colgroup>");
 
-            builder.append("<tbody>\n");
+            tableBuilder.append("<tbody>\n");
 
             table.getHeader().forEach(row -> {
-                builder.append("<tr>\n");
+                tableBuilder.append("<tr>\n");
                 row.getCells().forEach(cell -> {
-                    builder.append("<th>");
-                    builder.append(cell.getText());
-                    builder.append("</th>\n");
+                    tableBuilder.append("<th>");
+                    tableBuilder.append(cell.getText());
+                    tableBuilder.append("</th>\n");
                 });
-                builder.append("</tr>\n");
+                tableBuilder.append("</tr>\n");
             });
 
             table.getBody().forEach(row -> {
-                builder.append("<tr>\n");
+                tableBuilder.append("<tr>\n");
                 row.getCells().forEach(cell -> {
-                    builder.append("<td>");
-                    builder.append(cell.getText());
-                    builder.append("</td>\n");
+                    String span = cell.getColspan() > 0 ? " colspan='3'" : "";
+                    tableBuilder.append("<td" + span + ">");
+                    tableBuilder.append(cell.getText());
+                    tableBuilder.append("</td>\n");
                 });
-                builder.append("</tr>\n");
+                tableBuilder.append("</tr>\n");
             });
 
-            builder.append("\n</tbody>");
-            builder.append("\n</table>\n");
+            tableBuilder.append("\n</tbody>");
+            tableBuilder.append("\n</table>\n");
 
-            return builder.toString();
+            return tableBuilder.toString();
 
         } else if (transform.equals("paragraph")) {
             StructuralNode block = (StructuralNode) node;
@@ -112,11 +121,21 @@ public class ConfluenceConverter extends StringConverter {
         } else if (transform.equals("image")) {
             Block block = (Block) node;
 
-            return "<p>\n" +
-                    "<ac:image>\n" +
-                    "<ri:attachment ri:filename='" + block.getAttribute("target") + "'/>\n" +
-                    "</ac:image>\n" +
-                    "</p>\n";
+            StringBuilder imageBuilder = new StringBuilder();
+
+            imageBuilder
+                    .append("<p>")
+
+                    .append("<ac:image")
+                    .append(" ac:align='").append(block.getAttribute("align"))
+                    .append("' ac:width='").append(block.getAttribute("width"))
+                    .append("'>")
+
+                    .append("<ri:attachment ri:filename='").append(block.getAttribute("target")).append("'/>")
+                    .append("</ac:image>")
+                    .append("</p>");
+
+            return imageBuilder.toString();
 
         } else if (transform.equals("dlist")) {
 
@@ -128,9 +147,8 @@ public class ConfluenceConverter extends StringConverter {
                         .append("<strong>")
                         .append(entry.getTerms().get(0).getText())
                         .append("</strong>")
-                        .append("<br/>")
-                        .append(entry.getDescription().convert())
-                        .append("</p>");
+                        .append("</p>")
+                        .append(entry.getDescription().convert());
             }
             return builder.toString();
 

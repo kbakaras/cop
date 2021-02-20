@@ -3,6 +3,7 @@ package ru.kbakaras.cop.confluence;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.utils.URIBuilder;
 import org.apache.http.entity.ContentType;
+import org.apache.http.entity.mime.HttpMultipartMode;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
 import ru.kbakaras.cop.confluence.dto.Attachment;
 import ru.kbakaras.cop.confluence.dto.AttachmentList;
@@ -13,6 +14,7 @@ import ru.kbakaras.sugar.restclient.SugarRestClient;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
 
 public class ConfluenceApi implements Closeable {
 
@@ -97,6 +99,8 @@ public class ConfluenceApi implements Closeable {
         HttpEntity entity = MultipartEntityBuilder
                 .create()
                 .addBinaryBody("file", data, ContentType.IMAGE_PNG, fileName)
+                .setMode(HttpMultipartMode.BROWSER_COMPATIBLE)
+                .setCharset(StandardCharsets.UTF_8)
                 .build();
 
         SugarRestClient.Response response = client.post(uriBuilder.toString(), entity, "X-Atlassian-Token: nocheck");

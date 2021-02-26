@@ -56,7 +56,7 @@ public class ConfluenceConverter extends StringConverter {
                 case "strong":
                     return "<b>" + phrase.getText() + "</b>";
                 case "monospaced":
-                    return "<pre>" + phrase.getText() + "</pre>";
+                    return "<code>" + phrase.getText() + "</code>";
                 case "link":
                     return "<a href='" + phrase.getTarget() + "'>" + phrase.getReftext() + "</a>";
                 default:

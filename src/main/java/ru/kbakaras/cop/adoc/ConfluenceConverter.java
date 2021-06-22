@@ -14,6 +14,7 @@ import org.asciidoctor.ast.StructuralNode;
 import org.asciidoctor.ast.Table;
 import org.asciidoctor.converter.ConverterFor;
 import org.asciidoctor.converter.StringConverter;
+import ru.kbakaras.sugar.utils.StringUtils;
 
 import java.util.Map;
 import java.util.Optional;
@@ -95,7 +96,9 @@ public class ConfluenceConverter extends StringConverter {
             table.getBody().forEach(row -> {
                 tableBuilder.append("<tr>\n");
                 row.getCells().forEach(cell -> {
-                    String span = cell.getColspan() > 0 ? " colspan='3'" : "";
+                    String span = StringUtils.join(" ",
+                            cell.getColspan() > 0 ? " colspan='" + cell.getColspan() + "'" : "",
+                            cell.getRowspan() > 0 ? " rowspan='" + cell.getRowspan() + "'" : "");
                     tableBuilder.append("<td" + span + ">");
                     tableBuilder.append(cell.getText());
                     tableBuilder.append("</td>\n");

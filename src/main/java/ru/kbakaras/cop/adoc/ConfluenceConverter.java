@@ -172,6 +172,21 @@ public class ConfluenceConverter extends StringConverter {
 
             return builder.toString();
 
+        } else if (transform.equals("olist")) {
+
+            List list = (List) node;
+
+            StringBuilder builder = new StringBuilder();
+            builder.append("<ol>");
+            for (StructuralNode listItem : list.getItems()) {
+                builder.append("<li>");
+                builder.append(listItem.convert());
+                builder.append("</li>");
+            }
+            builder.append("</ol>");
+
+            return builder.toString();
+
         } else if (transform.equals("list_item")) {
 
             ListItem item = (ListItem) node;

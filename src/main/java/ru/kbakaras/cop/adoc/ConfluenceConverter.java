@@ -60,6 +60,8 @@ public class ConfluenceConverter extends StringConverter {
                     return "<code>" + phrase.getText() + "</code>";
                 case "link":
                     return "<a href='" + phrase.getTarget() + "'>" + phrase.getReftext() + "</a>";
+                case "line":
+                    return phrase.getText() + "<br/>";
                 default:
                     return phrase.getText();
             }

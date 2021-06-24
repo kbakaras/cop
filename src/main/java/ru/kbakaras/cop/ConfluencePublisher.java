@@ -5,9 +5,6 @@ import org.apache.commons.io.FileUtils;
 import org.asciidoctor.Asciidoctor;
 import org.asciidoctor.OptionsBuilder;
 import org.asciidoctor.SafeMode;
-import org.htmlcleaner.CleanerProperties;
-import org.htmlcleaner.HtmlCleaner;
-import org.htmlcleaner.PrettyXmlSerializer;
 import org.htmlcleaner.TagNode;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
@@ -71,7 +68,7 @@ public class ConfluencePublisher implements Callable<Integer> {
 
     @SneakyThrows
     @Override
-    public Integer call() throws Exception {
+    public Integer call() {
         throw new IllegalArgumentException("Operation not supported yet");
     }
 
@@ -92,6 +89,17 @@ public class ConfluencePublisher implements Callable<Integer> {
         content.setBody(contentBody);
     }
 
+    /**
+     * Метод вызывается из команд публикации/обновления страницы. Он исполняет последовательность действий:
+     * <ol>
+     * <li>Зачитывает содержимое файла с публикуемым документом.</li>
+     * <li>Выполняет его конвертацию из формата asciidoctor в формат хранения Confluence.</li>
+     * <li>Выполняет канонизацию полученного в результате конвертации html.</li>
+     * <li>Определяет список изображений и размещает их в специальной структуре.</li>
+     * </ol>
+     * В итоге на выходе получается объект {@link PageSource}, содержащий структурированное содержимое
+     * страницы, подготовленное к публикации через api Confluence.
+     */
     PageSource convertPageSource() throws IOException {
 
         if (!file.exists()) {
@@ -113,14 +121,7 @@ public class ConfluencePublisher implements Callable<Integer> {
         asciidoctor.shutdown();
         // endregion
 
-        HtmlCleaner cleaner = new HtmlCleaner();
-
-        CleanerProperties props = cleaner.getProperties();
-        props.setOmitHtmlEnvelope(true);
-        props.setOmitXmlDeclaration(true);
-
-        TagNode node = cleaner.clean(pageContent);
-
+        TagNode node = PageSource.cleanContent(pageContent);
 
         File imageDir = file.getParentFile();
         ArrayList<ImageSource> images = new ArrayList<>();
@@ -135,7 +136,7 @@ public class ConfluencePublisher implements Callable<Integer> {
             imageNode.addAttribute("ri:filename", imageFile.getName());
         }
 
-        return new PageSource(pageTitle, new PrettyXmlSerializer(cleaner.getProperties()).getAsString(node), images);
+        return new PageSource(pageTitle, node, images);
     }
 
     ConfluenceApi confluenceApi() {

@@ -46,7 +46,7 @@ public class PublishCommand implements Callable<Integer> {
             parent.setContentValue(content, pageSource);
 
             Content newContent = api.createContent(content);
-            if (!pageSource.sha1.equals(newContent.sha1())) {
+            if (pageSource.differentContent(newContent.getBody().getStorage().getValue())) {
                 log.warn("SHA1 of published content differs from converted, check converter");
             }
             // endregion

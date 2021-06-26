@@ -102,7 +102,11 @@ public class ConfluenceConverter extends StringConverter {
                             cell.getColspan() > 0 ? " colspan='" + cell.getColspan() + "'" : "",
                             cell.getRowspan() > 0 ? " rowspan='" + cell.getRowspan() + "'" : "");
                     tableBuilder.append("<td" + span + ">");
-                    tableBuilder.append(cell.getText());
+                    if ("asciidoc".equals(cell.getStyle())) {
+                        tableBuilder.append(cell.getContent());
+                    } else {
+                        tableBuilder.append(cell.getText());
+                    }
                     tableBuilder.append("</td>\n");
                 });
                 tableBuilder.append("</tr>\n");

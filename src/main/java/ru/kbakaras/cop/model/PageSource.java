@@ -36,6 +36,7 @@ public class PageSource {
         CleanerProperties props = cleaner.getProperties();
         props.setOmitHtmlEnvelope(true);
         props.setOmitXmlDeclaration(true);
+        props.setDeserializeEntities(true);
 
         return cleaner.clean(htmlContent);
     }

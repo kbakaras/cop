@@ -15,7 +15,7 @@ import ru.kbakaras.cop.confluence.dto.Content;
 import ru.kbakaras.cop.confluence.dto.ContentBody;
 import ru.kbakaras.cop.confluence.dto.ContentBodyValue;
 import ru.kbakaras.cop.confluence.dto.Space;
-import ru.kbakaras.cop.model.ImageSource;
+import ru.kbakaras.cop.model.AttachmentSource;
 import ru.kbakaras.cop.model.PageSource;
 import ru.kbakaras.sugar.restclient.LoginPasswordDto;
 import ru.kbakaras.sugar.restclient.SugarRestClient;
@@ -123,20 +123,41 @@ public class ConfluencePublisher implements Callable<Integer> {
 
         TagNode node = PageSource.cleanContent(pageContent);
 
-        File imageDir = file.getParentFile();
-        ArrayList<ImageSource> images = new ArrayList<>();
+        File attachmentDir = file.getParentFile();
+        ArrayList<AttachmentSource> attachments = new ArrayList<>();
+
+        List<? extends TagNode> attachmentNodes = node.getElementList(
+                tagNode -> tagNode.getName().equals("ri:attachment")
+                        && tagNode.getParent().getName().equals("ac:link"),
+                true);
+
+        for (TagNode attachmentNode : attachmentNodes) {
+
+            File attachmentFile = new File(attachmentDir, attachmentNode.getAttributeByName("ri:filename"));
+
+            AttachmentSource attachmentSource = new AttachmentSource(attachmentFile);
+            attachments.add(attachmentSource);
+
+            attachmentNode.removeAttribute("ri:filename");
+            attachmentNode.addAttribute("ri:filename", attachmentSource.name);
+        }
+
         List<? extends TagNode> imageNodes = node.getElementList(
                 tagNode -> tagNode.getName().equals("ri:attachment") && tagNode.getParent().getName().equals("ac:image"),
                 true);
 
         for (TagNode imageNode: imageNodes) {
-            File imageFile = new File(imageDir, imageNode.getAttributeByName("ri:filename"));
-            images.add(new ImageSource(imageFile));
+
+            File imageFile = new File(attachmentDir, imageNode.getAttributeByName("ri:filename"));
+
+            AttachmentSource attachmentSource = new AttachmentSource(imageFile);
+            attachments.add(attachmentSource);
+
             imageNode.removeAttribute("ri:filename");
-            imageNode.addAttribute("ri:filename", imageFile.getName());
+            imageNode.addAttribute("ri:filename", attachmentSource.name);
         }
 
-        return new PageSource(pageTitle, node, images);
+        return new PageSource(pageTitle, node, attachments);
     }
 
     ConfluenceApi confluenceApi() {

@@ -1,5 +1,6 @@
 package ru.kbakaras.cop.adoc;
 
+import lombok.SneakyThrows;
 import org.asciidoctor.ast.Block;
 import org.asciidoctor.ast.Column;
 import org.asciidoctor.ast.ContentNode;
@@ -16,6 +17,11 @@ import org.asciidoctor.converter.ConverterFor;
 import org.asciidoctor.converter.StringConverter;
 import ru.kbakaras.sugar.utils.StringUtils;
 
+import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -59,7 +65,7 @@ public class ConfluenceConverter extends StringConverter {
                 case "monospaced":
                     return "<code>" + phrase.getText() + "</code>";
                 case "link":
-                    return "<a href='" + phrase.getTarget() + "'>" + phrase.getReftext() + "</a>";
+                    return createLink(phrase);
                 case "line":
                     return phrase.getText() + "<br/>";
                 default:
@@ -201,6 +207,28 @@ public class ConfluenceConverter extends StringConverter {
         return null;
     }
 
+
+    @SneakyThrows({UnsupportedEncodingException.class, URISyntaxException.class})
+    private static String createLink(PhraseNode phrase) {
+
+        String target = phrase.getTarget();
+
+        if (new URI(URLEncoder.encode(target, StandardCharsets.UTF_8.name())).isAbsolute()) {
+            return "<a href='" + target + "'>" + phrase.getReftext() + "</a>";
+
+        } else {
+            return "<ac:link>" +
+                    "<ri:attachment ri:filename='" + target + "'/>" +
+//                  Так сделать не получилось (htmlcleaner обрамляет CDATA в комментарии)
+//                  "<ac:plain-text-link-body>" +
+//                  "<![CDATA[" + phrase.getReftext() + "]]>" +
+//                  "</ac:plain-text-link-body>" +
+                    "<ac:link-body>" +
+                    phrase.getReftext() +
+                    "</ac:link-body>" +
+                    "</ac:link>";
+        }
+    }
 
     private static String formatWidth(int width) {
         return String.format("width: %d.0%%; ", width);

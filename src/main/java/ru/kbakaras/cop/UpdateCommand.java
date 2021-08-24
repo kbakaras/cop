@@ -6,8 +6,8 @@ import ru.kbakaras.cop.confluence.ConfluenceApi;
 import ru.kbakaras.cop.confluence.dto.Attachment;
 import ru.kbakaras.cop.confluence.dto.Content;
 import ru.kbakaras.cop.confluence.dto.ContentList;
-import ru.kbakaras.cop.model.ImageDestination;
-import ru.kbakaras.cop.model.ImageSource;
+import ru.kbakaras.cop.model.AttachmentDestination;
+import ru.kbakaras.cop.model.AttachmentSource;
 import ru.kbakaras.cop.model.PageSource;
 import ru.kbakaras.sugar.utils.CollectionUpdater;
 
@@ -80,18 +80,18 @@ public class UpdateCommand implements Callable<Integer> {
 
 
             // region Обновление изображений (вложений)
-            List<ImageDestination> destinationImages = new ArrayList<>();
+            List<AttachmentDestination> destinationImages = new ArrayList<>();
             for (Attachment attachment : api.findAttachmentByContentId(oldContent.getId()).getResults()) {
-                destinationImages.add(new ImageDestination(attachment, api.getAttachmentData(attachment)));
+                destinationImages.add(new AttachmentDestination(attachment, api.getAttachmentData(attachment)));
             }
 
-            new CollectionUpdater<ImageDestination, ImageSource, String>(id -> id.name, is -> is.name)
+            new CollectionUpdater<AttachmentDestination, AttachmentSource, String>(id -> id.name, is -> is.name)
 
                     .check4Changes((id, is) -> !id.sha1.equals(is.sha1))
 
                     .createElement(is -> {
                         try {
-                            api.createAttachment(oldContent.getId(), is.name, is.data);
+                            api.createAttachment(oldContent.getId(), is.name, is.mime, is.data);
                         } catch (URISyntaxException | IOException e) {
                             throw new RuntimeException(e);
                         }
@@ -105,7 +105,7 @@ public class UpdateCommand implements Callable<Integer> {
                         }
                     })
 
-                    .collection(destinationImages, pageSource.imageSourceList);
+                    .collection(destinationImages, pageSource.attachmentSourceList);
             // endregion
 
         }

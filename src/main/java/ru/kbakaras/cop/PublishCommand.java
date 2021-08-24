@@ -54,10 +54,10 @@ public class PublishCommand implements Callable<Integer> {
 
             // region Загрузка изображений
             pageSource
-                    .imageSourceList
+                    .attachmentSourceList
                     .forEach(imageSource -> {
                         try {
-                            api.createAttachment(newContent.getId(), imageSource.name, imageSource.data);
+                            api.createAttachment(newContent.getId(), imageSource.name, imageSource.mime, imageSource.data);
                         } catch (URISyntaxException | IOException e) {
                             throw new RuntimeException(e);
                         }

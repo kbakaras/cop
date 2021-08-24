@@ -93,12 +93,12 @@ public class ConfluenceApi implements Closeable {
         response.assertStatusCode(200);
     }
 
-    public void createAttachment(String contentId, String fileName, byte[] data) throws URISyntaxException, IOException {
+    public void createAttachment(String contentId, String fileName, String fileMime, byte[] data) throws URISyntaxException, IOException {
         URIBuilder uriBuilder = new URIBuilder(String.format(
                 baseUrl + "/rest/api/content/%s/child/attachment", contentId));
         HttpEntity entity = MultipartEntityBuilder
                 .create()
-                .addBinaryBody("file", data, ContentType.IMAGE_PNG, fileName)
+                .addBinaryBody("file", data, ContentType.parse(fileMime), fileName)
                 .setMode(HttpMultipartMode.BROWSER_COMPATIBLE)
                 .setCharset(StandardCharsets.UTF_8)
                 .build();

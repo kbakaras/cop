@@ -142,9 +142,13 @@ public class ConfluenceConverter extends StringConverter {
                     .append("<p>")
 
                     .append("<ac:image")
-                    .append(" ac:align='").append(block.getAttribute("align"))
-                    .append("' ac:width='").append(block.getAttribute("width"))
-                    .append("'>")
+                    .append(" ac:align='").append(block.getAttribute("align")).append("'");
+
+            Optional.ofNullable(block.getAttribute("width"))
+                    .ifPresent(width -> imageBuilder.append(" ac:width='").append(width).append("'"));
+
+            imageBuilder
+                    .append(">")
 
                     .append("<ri:attachment ri:filename='").append(block.getAttribute("target")).append("'/>")
                     .append("</ac:image>")

@@ -3,7 +3,7 @@ package ru.kbakaras.cop;
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
 import org.asciidoctor.Asciidoctor;
-import org.asciidoctor.OptionsBuilder;
+import org.asciidoctor.Options;
 import org.asciidoctor.SafeMode;
 import org.htmlcleaner.TagNode;
 import picocli.CommandLine;
@@ -112,11 +112,14 @@ public class ConfluencePublisher implements Callable<Integer> {
         Asciidoctor asciidoctor = Asciidoctor.Factory.create();
         asciidoctor.javaConverterRegistry().register(ConfluenceConverter.class);
 
-        String pageTitle = asciidoctor.readDocumentHeader(pageContentSource).getDocumentTitle().getMain();
-        String pageContent = asciidoctor.convert(pageContentSource, OptionsBuilder.options()
+
+        String pageTitle = asciidoctor.load(pageContentSource, Options.builder().parseHeaderOnly(true).build())
+                .getDoctitle();
+        String pageContent = asciidoctor.convert(pageContentSource, Options.builder()
                 .backend("confluence")
                 .toFile(false)
-                .safe(SafeMode.UNSAFE));
+                .safe(SafeMode.UNSAFE)
+                .build());
 
         asciidoctor.shutdown();
         // endregion

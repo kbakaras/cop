@@ -1,0 +1,56 @@
+Performing a release
+
+1. Create and stage the Maven artefacts
+
+mvn clean deploy
+mvn release:clean
+mvn release:prepare
+mvn release:perform
+
+2. Close the release
+
+Log into Sonatype, go to Staging Repositories, select the repository, and click Close
+
+3. Verify everything is OK
+
+4. Finalise the Maven release
+
+In Sonatype, select the repository, and click Release.
+
+5. Create the file artefacts
+
+5.1 Bin
+create a folder for the "bin" release
+add htmlcleaner-V.v.jar
+add htmlcleaner-V.v.jar.asc
+add license.txt
+
+Zip these up as htmlcleaner-V.v.zip
+
+5.2 GUI
+create a folder for the "gui" release
+cd to the htmlcleaner-gui subproject
+update the pom.xml with the new version
+mvn clean package
+copy htmlcleaner-gui-V.v-with-dependencies.jar to the gui release folder
+rename to remove the "-with-dependencies" part of the file name
+gpg --armor --detach-sig htmlcleaner-gui-V.v.jar
+add license.txt
+
+Zip the jar, asc and license as htmlcleaner-gui-V.v.zip
+
+5.3 Source
+create a folder for the "src" release
+svn export [svn location of tag]
+copy exported src folder into src release folder
+copy config, example.xml, license.txt. pom.xml into src release folder
+Zip as htmlcleaner-V.v-src.zip
+
+6. Upload the zip files to Sourceforge
+
+Create a new folder for the new version, and upload all three zip files
+
+Select the htmlcleaner-V.v.zip file, and click Details
+Click "select all" and save to make it the default download
+
+7. Update the website

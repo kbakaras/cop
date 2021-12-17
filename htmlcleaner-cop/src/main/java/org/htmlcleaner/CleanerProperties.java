@@ -91,6 +91,8 @@ public class CleanerProperties implements HtmlModificationListener{
 
     private boolean allowInvalidAttributeNames;
     private String invalidAttributeNamePrefix;
+
+    private boolean copCdata;
     
     /**
      * "cause the cleaner cannot keep track of whitespace at that level",
@@ -649,4 +651,13 @@ public class CleanerProperties implements HtmlModificationListener{
 	public boolean isAllowInvalidAttributeNames() {
 		return allowInvalidAttributeNames;
 	}
+
+    public boolean isCopCdata() {
+        return copCdata;
+    }
+
+    public void setCopCdata(boolean copCdata) {
+        this.copCdata = copCdata;
+    }
+
 }

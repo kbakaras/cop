@@ -13,6 +13,8 @@ public class Attachment {
     private String status;
     private String title;
 
+    private ContentVersion version;
+
     private Extensions extensions;
 
     @JsonProperty(value = "_links")

@@ -60,9 +60,10 @@ public class ConfluenceApi implements Closeable {
     }
 
     public AttachmentList findAttachmentByContentId(String contentId) throws URISyntaxException, IOException {
-        URIBuilder uriBuilder = new URIBuilder(String.format(
-                baseUrl + "/rest/api/content/%s/child/attachment",
-                contentId));
+
+        URIBuilder uriBuilder =
+                new URIBuilder(String.format(baseUrl + "/rest/api/content/%s/child/attachment", contentId))
+                        .addParameter("expand", "version");
 
         SugarRestClient.Response response = client.get(uriBuilder.toString());
 

@@ -64,6 +64,44 @@ public class UpdateCommand implements Callable<Integer> {
             // endregion
 
 
+            // region Обновление изображений (вложений)
+            List<AttachmentDestination> destinationImages = new ArrayList<>();
+            for (Attachment attachment : api.findAttachmentByContentId(oldContent.getId()).getResults()) {
+                destinationImages.add(new AttachmentDestination(attachment, api.getAttachmentData(attachment)));
+            }
+
+            new CollectionUpdater<AttachmentDestination, AttachmentSource, String>(id -> id.name, is -> is.name)
+
+                    .check4Changes((id, is) -> {
+                        if (id.sha1.equals(is.sha1)) {
+                            is.setVersionAtSave(id.attachment.getVersion().getNumber());
+                            return false;
+                        }
+                        return true;
+                    })
+
+                    .createElement(is -> {
+                        try {
+                            api.createAttachment(oldContent.getId(), is.name, is.mime, is.data);
+                            is.setVersionAtSave(1);
+                        } catch (URISyntaxException | IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    })
+
+                    .updateElement((id, is) -> {
+                        try {
+                            api.updateAttachmentData(oldContent.getId(), id.attachment, is.data);
+                            is.setVersionAtSave(id.attachment.getVersion().getNumber() + 1);
+                        } catch (URISyntaxException | IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    })
+
+                    .collection(destinationImages, pageSource.attachmentSourceList);
+            // endregion
+
+
             // region Обновление основного содержимого страницы
             if (pageSource.differentContent(oldContent.getBody().getStorage().getValue())) {
                 Content content = new Content();
@@ -77,37 +115,6 @@ public class UpdateCommand implements Callable<Integer> {
                 }
             }
             // endregion
-
-
-            // region Обновление изображений (вложений)
-            List<AttachmentDestination> destinationImages = new ArrayList<>();
-            for (Attachment attachment : api.findAttachmentByContentId(oldContent.getId()).getResults()) {
-                destinationImages.add(new AttachmentDestination(attachment, api.getAttachmentData(attachment)));
-            }
-
-            new CollectionUpdater<AttachmentDestination, AttachmentSource, String>(id -> id.name, is -> is.name)
-
-                    .check4Changes((id, is) -> !id.sha1.equals(is.sha1))
-
-                    .createElement(is -> {
-                        try {
-                            api.createAttachment(oldContent.getId(), is.name, is.mime, is.data);
-                        } catch (URISyntaxException | IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    })
-
-                    .updateElement((id, is) -> {
-                        try {
-                            api.updateAttachmentData(oldContent.getId(), id.attachment, is.data);
-                        } catch (URISyntaxException | IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    })
-
-                    .collection(destinationImages, pageSource.attachmentSourceList);
-            // endregion
-
         }
 
         return 0;

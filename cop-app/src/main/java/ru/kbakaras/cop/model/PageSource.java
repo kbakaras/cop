@@ -7,26 +7,32 @@ import org.htmlcleaner.HtmlCleaner;
 import org.htmlcleaner.SimpleXmlSerializer;
 import org.htmlcleaner.TagNode;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class PageSource {
 
     public final String title;
-    public final String content;
-    private final String sha1;
+
+    private final TagNode content;
 
     public final List<AttachmentSource> attachmentSourceList;
 
 
-    public PageSource(String title, TagNode content, List<AttachmentSource> attachmentSourceList) {
+    public PageSource(String title, TagNode content, Collection<AttachmentSource> attachmentSourceList) {
         this.title = title;
-        this.content = serializeContent(content);
-        this.sha1 = DigestUtils.sha1Hex(this.content);
-        this.attachmentSourceList = attachmentSourceList;
+        this.content = content;
+        this.attachmentSourceList = new ArrayList<>(attachmentSourceList);
+    }
+
+    public String getContent() {
+        return serializeContent(content);
     }
 
     public boolean differentContent(String htmlContent) {
-        return !sha1.equals(DigestUtils.sha1Hex(serializeContent(cleanContent(htmlContent))));
+        return !DigestUtils.sha1Hex(getContent())
+                .equals(DigestUtils.sha1Hex(serializeContent(cleanContent(htmlContent))));
     }
 
 

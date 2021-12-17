@@ -25,8 +25,9 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 
@@ -82,7 +83,7 @@ public class ConfluencePublisher implements Callable<Integer> {
                 .map(id -> new Ancestor[]{new Ancestor(id)})
                 .ifPresent(content::setAncestors);
 
-        ContentBodyValue contentValue = new ContentBodyValue(pageSource.content, ContentBodyValue.REPRESENTATION_Storage);
+        ContentBodyValue contentValue = new ContentBodyValue(pageSource.getContent(), ContentBodyValue.REPRESENTATION_Storage);
         ContentBody contentBody = new ContentBody();
         contentBody.setStorage(contentValue);
 
@@ -127,7 +128,7 @@ public class ConfluencePublisher implements Callable<Integer> {
         TagNode node = PageSource.cleanContent(pageContent);
 
         File attachmentDir = file.getParentFile();
-        ArrayList<AttachmentSource> attachments = new ArrayList<>();
+        Map<File, AttachmentSource> attachments = new HashMap<>();
 
         List<? extends TagNode> attachmentNodes = node.getElementList(
                 tagNode -> tagNode.getName().equals("ri:attachment")
@@ -138,8 +139,9 @@ public class ConfluencePublisher implements Callable<Integer> {
 
             File attachmentFile = new File(attachmentDir, attachmentNode.getAttributeByName("ri:filename"));
 
-            AttachmentSource attachmentSource = new AttachmentSource(attachmentFile);
-            attachments.add(attachmentSource);
+            AttachmentSource attachmentSource = attachments
+                    .computeIfAbsent(attachmentFile, AttachmentSource::new)
+                    .addNode(attachmentNode);
 
             attachmentNode.removeAttribute("ri:filename");
             attachmentNode.addAttribute("ri:filename", attachmentSource.name);
@@ -153,14 +155,15 @@ public class ConfluencePublisher implements Callable<Integer> {
 
             File imageFile = new File(attachmentDir, imageNode.getAttributeByName("ri:filename"));
 
-            AttachmentSource attachmentSource = new AttachmentSource(imageFile);
-            attachments.add(attachmentSource);
+            AttachmentSource attachmentSource = attachments
+                    .computeIfAbsent(imageFile, AttachmentSource::new)
+                    .addNode(imageNode);
 
             imageNode.removeAttribute("ri:filename");
             imageNode.addAttribute("ri:filename", attachmentSource.name);
         }
 
-        return new PageSource(pageTitle, node, attachments);
+        return new PageSource(pageTitle, node, attachments.values());
     }
 
     ConfluenceApi confluenceApi() {

@@ -42,6 +42,10 @@ public class PublishCommand implements Callable<Integer> {
 
 
             // region Создание страницы
+            pageSource
+                    .attachmentSourceList
+                    .forEach(attachmentSource -> attachmentSource.setVersionAtSave(1));
+
             Content content = new Content();
             parent.setContentValue(content, pageSource);
 

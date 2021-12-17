@@ -205,7 +205,19 @@ public class ConfluenceConverter extends StringConverter {
         } else if (transform.equals("list_item")) {
 
             ListItem item = (ListItem) node;
-            return item.hasText() ? item.getText() : item.getContent().toString();
+
+            if (item.hasText()) {
+                StringBuilder builder = new StringBuilder(item.getText());
+                for (StructuralNode itemNode: item.getBlocks()) {
+                    builder.append(itemNode.convert());
+                }
+
+                return builder.toString();
+
+            } else {
+
+                return item.getContent().toString();
+            }
 
         } else if (transform.equals("listing")) {
 

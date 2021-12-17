@@ -24,6 +24,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -206,6 +207,27 @@ public class ConfluenceConverter extends StringConverter {
             ListItem item = (ListItem) node;
             return item.hasText() ? item.getText() : item.getContent().toString();
 
+        } else if (transform.equals("listing")) {
+
+            Block block = (Block) node;
+            StringBuilder builder = new StringBuilder();
+
+            builder.append(String.format(
+                    "<ac:structured-macro ac:name='code' ac:schema-version='1' ac:macro-id='%s'>",
+                    UUID.nameUUIDFromBytes(block.getSource().getBytes())));
+
+            Optional.ofNullable((String) block.getAttribute("language"))
+                    .map(String::toLowerCase)
+                    .map(value -> String.format("<ac:parameter ac:name='language'>%s</ac:parameter>", value))
+                    .ifPresent(builder::append);
+
+            builder.append("<ac:plain-text-body>");
+            builder.append("<![CDATA[").append(block.getSource()).append("]]>");
+            builder.append("</ac:plain-text-body>");
+
+            builder.append("</ac:structured-macro>");
+
+            return builder.toString();
         }
 
         return null;

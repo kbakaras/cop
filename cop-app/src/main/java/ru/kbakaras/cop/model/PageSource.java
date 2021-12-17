@@ -54,6 +54,8 @@ public class PageSource {
         CleanerProperties props = cleaner.getProperties();
         props.setOmitHtmlEnvelope(true);
         props.setOmitXmlDeclaration(true);
+        props.setCopCdata(true);
+        props.setUseCdataFor("ac:plain-text-body");
         return props;
     }
 

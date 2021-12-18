@@ -5,6 +5,7 @@ import org.apache.commons.io.FileUtils;
 import org.asciidoctor.Asciidoctor;
 import org.asciidoctor.Options;
 import org.asciidoctor.SafeMode;
+import org.htmlcleaner.ContentNode;
 import org.htmlcleaner.TagNode;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
@@ -130,21 +131,38 @@ public class ConfluencePublisher implements Callable<Integer> {
         File attachmentDir = file.getParentFile();
         Map<File, AttachmentSource> attachments = new HashMap<>();
 
-        List<? extends TagNode> attachmentNodes = node.getElementList(
-                tagNode -> tagNode.getName().equals("ri:attachment")
-                        && tagNode.getParent().getName().equals("ac:link"),
-                true);
+        List<? extends TagNode> linkNodes =
+                node.getElementList(tagNode -> tagNode.getName().equals("a"), true);
 
-        for (TagNode attachmentNode : attachmentNodes) {
+        for (TagNode linkNode : linkNodes) {
 
-            File attachmentFile = new File(attachmentDir, attachmentNode.getAttributeByName("ri:filename"));
+            String href = linkNode.getAttributeByName("href");
+            if (!isAbsoluteUri(href)) {
 
-            AttachmentSource attachmentSource = attachments
-                    .computeIfAbsent(attachmentFile, AttachmentSource::new)
-                    .addNode(attachmentNode);
+                File attachmentFile = new File(attachmentDir, href);
+                TagNode riAttachment = new TagNode("ri:attachment");
 
-            attachmentNode.removeAttribute("ri:filename");
-            attachmentNode.addAttribute("ri:filename", attachmentSource.name);
+                AttachmentSource attachmentSource = attachments
+                        .computeIfAbsent(attachmentFile, AttachmentSource::new)
+                        .addNode(riAttachment);
+
+                riAttachment.addAttribute("ri:filename", attachmentSource.name);
+
+                TagNode acLinkBody = new TagNode("ac:link-body");
+                acLinkBody.addChild(new ContentNode(linkNode.getText().toString()));
+
+                /* Такой вариант указан в описании формата хранения, так тоже можно.
+                Но в самом начале так не получилось из-за комментариев вокруг CDATA.
+                TagNode acLinkBody = new TagNode("ac:plain-text-link-body");
+                acLinkBody.addChild(new CData(linkNode.getText().toString()));*/
+
+                TagNode acLink = new TagNode("ac:link");
+                acLink.addChild(riAttachment);
+                acLink.addChild(acLinkBody);
+
+                linkNode.getParent().insertChildBefore(linkNode, acLink);
+                linkNode.getParent().removeChild(linkNode);
+            }
         }
 
         List<? extends TagNode> imageNodes = node.getElementList(
@@ -183,6 +201,12 @@ public class ConfluencePublisher implements Callable<Integer> {
     public static void main(String... args) {
         int exitCode = new CommandLine(new ConfluencePublisher()).execute(args);
         System.exit(exitCode);
+    }
+
+
+    public static boolean isAbsoluteUri(String href) {
+        //noinspection HttpUrlsUsage
+        return href.startsWith("http://") || href.startsWith("https://");
     }
 
 }

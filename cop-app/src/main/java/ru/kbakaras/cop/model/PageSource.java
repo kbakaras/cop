@@ -61,7 +61,7 @@ public class PageSource {
         props.setOmitHtmlEnvelope(true);
         props.setOmitXmlDeclaration(true);
         props.setCopCdata(true);
-        props.setUseCdataFor("ac:plain-text-body");
+        props.setUseCdataFor("ac:plain-text-body,ac:plain-text-link-body");
         return props;
     }
 

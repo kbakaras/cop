@@ -113,6 +113,7 @@ public class ConfluencePublisher implements Callable<Integer> {
         // region Конвертация документа в формат хранения Confluence
         Asciidoctor asciidoctor = Asciidoctor.Factory.create();
         asciidoctor.javaConverterRegistry().register(ConfluenceConverter.class);
+        asciidoctor.requireLibrary("asciidoctor-diagram");
 
 
         String pageTitle = asciidoctor.load(pageContentSource, Options.builder().parseHeaderOnly(true).build())

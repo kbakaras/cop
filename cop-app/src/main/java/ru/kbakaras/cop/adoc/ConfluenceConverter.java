@@ -15,6 +15,7 @@ import org.asciidoctor.ast.Table;
 import org.asciidoctor.converter.ConverterFor;
 import org.asciidoctor.converter.StringConverter;
 import ru.kbakaras.sugar.utils.StringUtils;
+import ru.kbakaras.sugar.utils.UUIDComposer;
 
 import java.util.Map;
 import java.util.Optional;
@@ -42,7 +43,8 @@ public class ConfluenceConverter extends StringConverter {
 
         if (node instanceof Document) {
             Document document = (Document) node;
-            return document.getContent().toString();
+
+            return (document.hasAttribute("toc") ? toc(document.getTitle()) : "") + document.getContent();
 
         } else if (node instanceof Section) {
             Section section = (Section) node;
@@ -240,6 +242,21 @@ public class ConfluenceConverter extends StringConverter {
         return null;
     }
 
+    private static String toc(String documentTitle) {
+
+        UUIDComposer composer = new UUIDComposer(UUID.fromString("9d6d6c0b-bb40-488f-9f0b-bd4829ce1bc8"));
+        UUID uuidExpand = UUID.nameUUIDFromBytes(documentTitle.getBytes());
+        UUID uuidToc = composer.compose(uuidExpand);
+
+        return  "<ac:structured-macro ac:name='expand' ac:schema-version='1' ac:macro-id='" + uuidExpand + "'>" +
+                "<ac:parameter ac:name='title'>Оглавление</ac:parameter>" +
+                "<ac:rich-text-body>" +
+                "<ac:structured-macro ac:name='toc' ac:schema-version='1' ac:macro-id='" + uuidToc + "'>" +
+                "<ac:parameter ac:name='printable'>false</ac:parameter>" +
+                "</ac:structured-macro>" +
+                "</ac:rich-text-body>" +
+                "</ac:structured-macro>";
+    }
 
     private static String formatWidth(int width) {
         return String.format("width: %d.0%%; ", width);

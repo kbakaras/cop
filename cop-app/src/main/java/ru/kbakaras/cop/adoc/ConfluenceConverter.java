@@ -17,11 +17,13 @@ import org.asciidoctor.converter.StringConverter;
 import ru.kbakaras.sugar.utils.StringUtils;
 import ru.kbakaras.sugar.utils.UUIDComposer;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 @ConverterFor("confluence")
 public class ConfluenceConverter extends StringConverter {
@@ -75,6 +77,14 @@ public class ConfluenceConverter extends StringConverter {
 
             StringBuilder tableBuilder = new StringBuilder();
             tableBuilder.append("<table class='wrapped relative-table'");
+
+            Optional<Boolean> wide = Optional
+                    .ofNullable((String) table.getAttribute("wide"))
+                    .map(Boolean::parseBoolean)
+                    .filter(value -> value);
+
+            wide.ifPresent(value -> tableBuilder.append("data-layout='wide'"));
+
             Optional.ofNullable(table.getAttribute("width"))
                     .map(ConfluenceConverter::formatWidth)
                     .map(width -> String.format(" style='%s'", width))
@@ -82,9 +92,8 @@ public class ConfluenceConverter extends StringConverter {
             tableBuilder.append(">");
 
             tableBuilder.append("<colgroup>");
-            for (Column column : table.getColumns()) {
-                tableBuilder.append("<col style='" + formatWidth(column.getWidth()) + "'></col>");
-            }
+            columnStyles(table.getColumns(), wide.map(value -> 960).orElse(680))
+                    .forEach(style -> tableBuilder.append("<col style='").append(style).append("'></col>"));
             tableBuilder.append("</colgroup>");
 
             tableBuilder.append("<tbody>\n");
@@ -242,6 +251,16 @@ public class ConfluenceConverter extends StringConverter {
         return null;
     }
 
+    private Stream<String> columnStyles(Collection<Column> columns, int tableWidth) {
+
+        int sum = columns.stream().mapToInt(Column::getWidth).sum();
+        return columns
+                .stream()
+                .mapToInt(Column::getWidth)
+                .map(width -> tableWidth * width / sum)
+                .mapToObj(ConfluenceConverter::formatWidth);
+    }
+
     private static String toc(String documentTitle) {
 
         UUIDComposer composer = new UUIDComposer(UUID.fromString("9d6d6c0b-bb40-488f-9f0b-bd4829ce1bc8"));
@@ -259,7 +278,7 @@ public class ConfluenceConverter extends StringConverter {
     }
 
     private static String formatWidth(int width) {
-        return String.format("width: %d.0%%; ", width);
+        return String.format("width: %d.0px; ", width);
     }
 
     private static String formatWidth(Object width) {

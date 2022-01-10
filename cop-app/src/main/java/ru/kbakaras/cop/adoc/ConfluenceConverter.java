@@ -147,7 +147,6 @@ public class ConfluenceConverter extends StringConverter {
 
             imageBuilder
                     .append("<p>")
-
                     .append("<ac:image");
 
             Optional.ofNullable(block.getAttribute("align"))

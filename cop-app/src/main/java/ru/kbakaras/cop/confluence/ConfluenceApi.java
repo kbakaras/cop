@@ -9,6 +9,7 @@ import ru.kbakaras.cop.confluence.dto.Attachment;
 import ru.kbakaras.cop.confluence.dto.AttachmentList;
 import ru.kbakaras.cop.confluence.dto.Content;
 import ru.kbakaras.cop.confluence.dto.ContentList;
+import ru.kbakaras.cop.confluence.dto.ContentProperty;
 import ru.kbakaras.sugar.restclient.SugarRestClient;
 
 import java.io.Closeable;
@@ -17,6 +18,8 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 
 public class ConfluenceApi implements Closeable {
+
+    private static final String EXPAND_CONTENT = "body.storage,version,container,metadata.properties.content_appearance_published,metadata.properties.content_appearance_draft";
 
     private final String baseUrl;
     private final String spaceKey;
@@ -47,7 +50,7 @@ public class ConfluenceApi implements Closeable {
      */
     public Content getContentById(String contentId) throws URISyntaxException, IOException {
         URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + contentId)
-                .addParameter("expand", "body.storage,version,container");
+                .addParameter("expand", EXPAND_CONTENT);
 
         SugarRestClient.Response response = client.get(uriBuilder.toString());
 
@@ -119,12 +122,36 @@ public class ConfluenceApi implements Closeable {
     }
 
     public Content createContent(Content content) throws URISyntaxException, IOException {
-        URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content");
+        URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content")
+                .addParameter("expand", EXPAND_CONTENT);
 
         SugarRestClient.Response response = client.post(uriBuilder.toString(), content);
 
         response.assertStatusCode(200);
         return response.getEntity(Content.class);
+    }
+
+    public void updateProperty(String contentId, ContentProperty property) throws URISyntaxException, IOException {
+
+        URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + contentId + "/property/" + property.getKey());
+
+        SugarRestClient.Response response = client.put(uriBuilder.toString(), property);
+
+        response.assertStatusCode(200);
+    }
+
+    /**
+     * Обновление параметра, задающего режим отображения.
+     */
+    public void setDefaultAppearance(Content content) throws URISyntaxException, IOException {
+
+        ContentProperty contentAppearance = content
+                .getMetadata().getProperties().get(ContentProperty.CONTENT_APPEARANCE_PUBLISHED);
+
+        if (!ContentProperty.CONTENT_APPEARANCE_VALUE_DEFAULT.equals(contentAppearance.getValue())) {
+            updateProperty(content.getId(),
+                    contentAppearance.getUpdatedProperty(ContentProperty.CONTENT_APPEARANCE_VALUE_DEFAULT));
+        }
     }
 
 

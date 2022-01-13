@@ -115,6 +115,8 @@ public class UpdateCommand implements Callable<Integer> {
                 }
             }
             // endregion
+
+            api.setDefaultAppearance(oldContent);
         }
 
         return 0;

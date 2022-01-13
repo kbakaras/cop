@@ -53,6 +53,8 @@ public class PublishCommand implements Callable<Integer> {
             if (pageSource.differentContent(newContent.getBody().getStorage().getValue())) {
                 log.warn("SHA1 of published content differs from converted, check converter");
             }
+
+            api.setDefaultAppearance(newContent);
             // endregion
 
 

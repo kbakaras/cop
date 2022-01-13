@@ -1,6 +1,7 @@
 package ru.kbakaras.cop.confluence.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -18,6 +19,9 @@ public class Content {
     private String type;
     private String status;
     private String title;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private ContentMetadata metadata;
 
     private Space space;
 

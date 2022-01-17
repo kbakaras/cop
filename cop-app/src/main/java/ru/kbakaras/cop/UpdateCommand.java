@@ -103,15 +103,22 @@ public class UpdateCommand implements Callable<Integer> {
 
 
             // region Обновление основного содержимого страницы
-            if (pageSource.differentContent(oldContent.getBody().getStorage().getValue())) {
+            if (!pageSource.title.equals(oldContent.getTitle())
+                    || pageSource.differentContent(oldContent.getBody().getStorage().getValue())) {
                 Content content = new Content();
                 content.setVersion(oldContent.getVersion());
                 content.getVersion().setNumber(content.getVersion().getNumber() + 1);
                 parent.setContentValue(content, pageSource);
 
                 content = api.updateContent(oldContent.getId(), content);
+
                 if (pageSource.differentContent(content.getBody().getStorage().getValue())) {
                     log.warn("SHA1 of updated content differs from converted, check converter");
+                }
+
+                if (!pageSource.title.equals(oldContent.getTitle())) {
+                    log.info("RENAMED: {}", oldContent.getTitle());
+                    log.info("-------> {}", content.getTitle());
                 }
             }
             // endregion

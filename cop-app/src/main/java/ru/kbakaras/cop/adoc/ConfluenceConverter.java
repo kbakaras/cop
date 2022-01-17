@@ -114,7 +114,7 @@ public class ConfluenceConverter extends StringConverter {
                     String span = StringUtils.join(" ",
                             cell.getColspan() > 0 ? " colspan='" + cell.getColspan() + "'" : "",
                             cell.getRowspan() > 0 ? " rowspan='" + cell.getRowspan() + "'" : "");
-                    tableBuilder.append("<td" + span + ">");
+                    tableBuilder.append("<td").append(span).append(">");
                     if ("asciidoc".equals(cell.getStyle())) {
                         tableBuilder.append(cell.getContent());
                     } else {
@@ -139,6 +139,14 @@ public class ConfluenceConverter extends StringConverter {
         } else if (transform.equals("preamble")) {
 
             return ((StructuralNode) node).getContent().toString();
+
+        } else if ("admonition".equals(transform)) {
+            Block block = (Block) node;
+
+            return "<ac:adf-node type='panel'>" +
+                    "<ac:adf-attribute key='panel-type'>note</ac:adf-attribute>" +
+                    "<ac:adf-content>" + block.getContent() + "</ac:adf-content>" +
+                    "</ac:adf-node>";
 
         } else if (transform.equals("image")) {
             Block block = (Block) node;

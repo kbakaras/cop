@@ -113,7 +113,8 @@ public class ConfluenceApi implements Closeable {
     }
 
     public Content updateContent(String contentId, Content content) throws URISyntaxException, IOException {
-        URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + contentId);
+        URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + contentId)
+                .addParameter("expand", EXPAND_CONTENT);
 
         SugarRestClient.Response response = client.put(uriBuilder.toString(), content);
 
@@ -148,7 +149,9 @@ public class ConfluenceApi implements Closeable {
         ContentProperty contentAppearance = content
                 .getMetadata().getProperties().get(ContentProperty.CONTENT_APPEARANCE_PUBLISHED);
 
-        if (!ContentProperty.CONTENT_APPEARANCE_VALUE_DEFAULT.equals(contentAppearance.getValue())) {
+        if (contentAppearance != null
+                && !ContentProperty.CONTENT_APPEARANCE_VALUE_DEFAULT.equals(contentAppearance.getValue())) {
+
             updateProperty(content.getId(),
                     contentAppearance.getUpdatedProperty(ContentProperty.CONTENT_APPEARANCE_VALUE_DEFAULT));
         }

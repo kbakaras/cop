@@ -143,10 +143,25 @@ public class ConfluenceConverter extends StringConverter {
         } else if ("admonition".equals(transform)) {
             Block block = (Block) node;
 
-            return "<ac:adf-node type='panel'>" +
-                    "<ac:adf-attribute key='panel-type'>note</ac:adf-attribute>" +
-                    "<ac:adf-content>" + block.getContent() + "</ac:adf-content>" +
-                    "</ac:adf-node>";
+            String type = Optional
+                    .ofNullable((String) block.getAttribute("style"))
+                    .map(String::toLowerCase)
+                    .map(value -> {
+                        switch (value) {
+                            case "note": return "info";
+                            case "important": return "note";
+                            case "caution": return "warning";
+                            default: return value;
+                        }
+                    })
+                    .orElse("info");
+
+            String content = block.getContent().toString();
+            String macroId = UUID.nameUUIDFromBytes(content.getBytes()).toString();
+
+            return String.format("<ac:structured-macro ac:name='%s' ac:schema-version='1' ac:macro-id='%s'>" +
+                            "<ac:rich-text-body>%s</ac:rich-text-body>" +
+                            "</ac:structured-macro>", type, macroId, content);
 
         } else if (transform.equals("image")) {
             Block block = (Block) node;

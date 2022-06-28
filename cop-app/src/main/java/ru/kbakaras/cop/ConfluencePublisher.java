@@ -11,11 +11,7 @@ import picocli.CommandLine;
 import picocli.CommandLine.Option;
 import ru.kbakaras.cop.adoc.ConfluenceConverter;
 import ru.kbakaras.cop.confluence.ConfluenceApi;
-import ru.kbakaras.cop.confluence.dto.Ancestor;
-import ru.kbakaras.cop.confluence.dto.Content;
-import ru.kbakaras.cop.confluence.dto.ContentBody;
-import ru.kbakaras.cop.confluence.dto.ContentBodyValue;
-import ru.kbakaras.cop.confluence.dto.Space;
+import ru.kbakaras.cop.confluence.dto.*;
 import ru.kbakaras.cop.model.AttachmentSource;
 import ru.kbakaras.cop.model.PageSource;
 import ru.kbakaras.sugar.restclient.LoginPasswordDto;
@@ -52,20 +48,14 @@ public class ConfluencePublisher implements Callable<Integer> {
     private String login;
 
     @Option(names = {"-p", "--password"},
-            description = "Confluence user password",
+            description = "Confluence user password or access token",
             required = true,
             arity = "0..1",
             interactive = true)
     private char[] password;
 
-    @Option(names = {"-f", "--file"}, description = "Path to file with page to publish", required = true)
-    private File file;
-
     @Option(names = {"-s", "--space"}, description = "Target space", required = true)
     String spaceKey;
-
-    @Option(names = {"-r", "--parent-id"}, description = "Confluence's parent page id")
-    String parentId;
 
 
     @SneakyThrows
@@ -75,7 +65,7 @@ public class ConfluencePublisher implements Callable<Integer> {
     }
 
 
-    void setContentValue(Content content, PageSource pageSource) {
+    void setContentValue(Content content, PageSource pageSource, String parentId) {
         content.setTitle(pageSource.title);
         content.setType(Content.TYPE_Page);
 
@@ -102,7 +92,7 @@ public class ConfluencePublisher implements Callable<Integer> {
      * В итоге на выходе получается объект {@link PageSource}, содержащий структурированное содержимое
      * страницы, подготовленное к публикации через api Confluence.
      */
-    PageSource convertPageSource() throws IOException {
+    PageSource convertPageSource(File file) throws IOException {
 
         if (!file.exists()) {
             throw new IllegalArgumentException(MessageFormat.format("File %s not found", file));

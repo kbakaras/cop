@@ -11,6 +11,7 @@ import ru.kbakaras.cop.model.AttachmentSource;
 import ru.kbakaras.cop.model.PageSource;
 import ru.kbakaras.sugar.utils.CollectionUpdater;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
@@ -28,15 +29,21 @@ public class UpdateCommand implements Callable<Integer> {
     @CommandLine.ParentCommand
     private ConfluencePublisher parent;
 
+    @CommandLine.Option(names = {"-f", "--file"}, description = "Path to file with page to publish", required = true)
+    private File file;
+
     @CommandLine.Option(names = {"-i", "--page-id"}, description = "Confluence's page id")
     private String pageId;
+
+    @CommandLine.Option(names = {"-r", "--parent-id"}, description = "Confluence's parent page id")
+    String parentId;
 
 
     @Override
     public Integer call() throws Exception {
 
         // Конвертация исходной страницы в формат хранения Confluence
-        PageSource pageSource = parent.convertPageSource();
+        PageSource pageSource = parent.convertPageSource(file);
 
         try (ConfluenceApi api = parent.confluenceApi()) {
 
@@ -108,7 +115,7 @@ public class UpdateCommand implements Callable<Integer> {
                 Content content = new Content();
                 content.setVersion(oldContent.getVersion());
                 content.getVersion().setNumber(content.getVersion().getNumber() + 1);
-                parent.setContentValue(content, pageSource);
+                parent.setContentValue(content, pageSource, parentId);
 
                 content = api.updateContent(oldContent.getId(), content);
 

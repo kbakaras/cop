@@ -11,7 +11,11 @@ import picocli.CommandLine;
 import picocli.CommandLine.Option;
 import ru.kbakaras.cop.adoc.ConfluenceConverter;
 import ru.kbakaras.cop.confluence.ConfluenceApi;
-import ru.kbakaras.cop.confluence.dto.*;
+import ru.kbakaras.cop.confluence.dto.Ancestor;
+import ru.kbakaras.cop.confluence.dto.Content;
+import ru.kbakaras.cop.confluence.dto.ContentBody;
+import ru.kbakaras.cop.confluence.dto.ContentBodyValue;
+import ru.kbakaras.cop.confluence.dto.Space;
 import ru.kbakaras.cop.model.AttachmentSource;
 import ru.kbakaras.cop.model.PageSource;
 import ru.kbakaras.sugar.restclient.LoginPasswordDto;
@@ -190,7 +194,9 @@ public class ConfluencePublisher implements Callable<Integer> {
 
 
     public static void main(String... args) {
-        int exitCode = new CommandLine(new ConfluencePublisher()).execute(args);
+        int exitCode = new CommandLine(new ConfluencePublisher())
+                .setExecutionExceptionHandler(new ExceptionHandler())
+                .execute(args);
         System.exit(exitCode);
     }
 
@@ -198,6 +204,15 @@ public class ConfluencePublisher implements Callable<Integer> {
     public static boolean isAbsoluteUri(String href) {
         //noinspection HttpUrlsUsage
         return href.startsWith("http://") || href.startsWith("https://");
+    }
+
+    private static class ExceptionHandler implements CommandLine.IExecutionExceptionHandler {
+
+        @Override
+        public int handleExecutionException(Exception e, CommandLine commandLine, CommandLine.ParseResult parseResult) throws Exception {
+            commandLine.getErr().println(e.getClass().getSimpleName() + ":\n" + e.getMessage());
+            return 1;
+        }
     }
 
 }

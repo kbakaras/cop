@@ -63,13 +63,13 @@
         <dependency>
             <groupId>ru.kbakaras.sugar</groupId>
             <artifactId>sugar-rest</artifactId>
-            <version>1.5.0</version>
+            <version>1.5.1</version>
         </dependency>
 
         <dependency>
             <groupId>ru.kbakaras.sugar</groupId>
             <artifactId>sugar-core</artifactId>
-            <version>1.5.0</version>
+            <version>1.5.1</version>
         </dependency>
 
 

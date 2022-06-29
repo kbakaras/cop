@@ -1,10 +1,7 @@
 package ru.kbakaras.cop;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import picocli.CommandLine;
 import ru.kbakaras.cop.confluence.ConfluenceApi;
 import ru.kbakaras.cop.confluence.dto.Attachment;
@@ -12,23 +9,16 @@ import ru.kbakaras.cop.confluence.dto.Content;
 import ru.kbakaras.cop.model.AttachmentDestination;
 import ru.kbakaras.cop.model.AttachmentSource;
 import ru.kbakaras.cop.model.PageSource;
-import ru.kbakaras.sugar.lazy.Lazy;
 import ru.kbakaras.sugar.utils.CollectionUpdater;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
-import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.stream.Collectors;
 
 @CommandLine.Command(
         name = "update",
@@ -49,63 +39,19 @@ public class UpdateCommand implements Callable<Integer> {
     @CommandLine.Option(names = {"-i", "--page-id"}, description = "Confluence's page id")
     private String pageId;
 
-    @CommandLine.Option(names = {"-r", "--parent-id"}, description = "Confluence's parent page id")
-    String parentId;
-
-    private final Lazy<ObjectMapper> yamlMapper = Lazy
-            .of(() -> new ObjectMapper(new YAMLFactory()).findAndRegisterModules());
-
 
     @Override
     public Integer call() throws Exception {
 
-        if (listFile == null && file == null) {
-            throw new IllegalArgumentException("Either [file] or [list-file] parameter has to be supplied");
-        }
+        parent.checkListFileOrFileIsSupplied(listFile, file, log);
 
-        if (listFile != null && file != null) {
-            log.warn("Parameter [file] is ignored if [list-file] was supplied");
-        }
+        UpdateTarget[] targets = listFile != null
+                ? UpdateTarget.readTargets(listFile)
+                : UpdateTarget.updateTarget(file, pageId);
 
-        UpdateTarget[] targets;
+        MutableBoolean stop = new MutableBoolean(false);
 
-        // region Формирование массива файлов для обновления страниц
-        if (listFile != null) {
-            if (!listFile.isFile()) {
-                throw new IllegalArgumentException(MessageFormat.format(
-                        "Supplied [list-file] '{0}' can not be read", listFile));
-            }
-
-            targets = yamlMapper.get().readValue(listFile, UpdateTarget[].class);
-            checkForClash(targets).ifPresent(message -> {
-                throw new IllegalArgumentException(message);
-            });
-
-        } else {
-            if (pageId.isBlank()) {
-                throw new IllegalArgumentException("The [pageId] parameter has to be supplied");
-            }
-
-            targets = new UpdateTarget[]{new UpdateTarget(file, pageId)};
-        }
-        // endregion
-
-        boolean stop = false;
-
-        Map<String, PageSource> newPages = new HashMap<>();
-
-        // region конвертация страниц в формат хранения Confluence
-        for (UpdateTarget target : targets) {
-            try {
-                log.info("Running asciidoctor conversion of '{}' for pageId={}", target.file, target.pageId);
-                newPages.put(target.pageId, parent.convertPageSource(target.file));
-
-            } catch (Exception e) {
-                log.error("Asciidoctor conversion of '" + target.file + "' failed", e);
-                stop = true;
-            }
-        }
-        // endregion
+        Map<String, PageSource> newPages = parent.convertTargets(targets, null, log, stop);
 
         try (ConfluenceApi api = parent.confluenceApi()) {
 
@@ -119,12 +65,12 @@ public class UpdateCommand implements Callable<Integer> {
 
                 } catch (Exception e) {
                     log.error("Unable to fetch old content from Confluence by pageId=" + target.pageId, e);
-                    stop = true;
+                    stop.setTrue();
                 }
             }
             // endregion
 
-            if (stop) {
+            if (stop.booleanValue()) {
                 throw new IllegalArgumentException();
             }
 
@@ -132,8 +78,7 @@ public class UpdateCommand implements Callable<Integer> {
 
                 Content oldContent = oldPages.get(target.pageId);
                 PageSource pageSource = newPages.get(target.pageId);
-
-                log.info("Updating publication of '{}' for pageId={}", target.file, target.pageId);
+                log.info("Updating publication of page '{}' for pageId={}", pageSource.title, target.pageId);
 
                 // region Обновление изображений (вложений)
                 List<AttachmentDestination> destinationImages = new ArrayList<>();
@@ -181,7 +126,7 @@ public class UpdateCommand implements Callable<Integer> {
                     Content content = new Content();
                     content.setVersion(oldContent.getVersion());
                     content.getVersion().setNumber(content.getVersion().getNumber() + 1);
-                    parent.setContentValue(content, pageSource, parentId);
+                    parent.setContentValue(content, pageSource, null);
 
                     content = api.updateContent(oldContent.getId(), content);
 
@@ -202,49 +147,6 @@ public class UpdateCommand implements Callable<Integer> {
         }
 
         return 0;
-    }
-
-    private Optional<String> checkForClash(UpdateTarget[] targets) {
-
-        Set<String> pages = new HashSet<>();
-        Set<String> clash = new HashSet<>();
-        for (UpdateTarget target : targets) {
-            if (pages.contains(target.pageId)) {
-                clash.add(target.pageId);
-            } else {
-                pages.add(target.pageId);
-            }
-        }
-
-        if (!clash.isEmpty()) {
-            return Optional.of(clash.stream()
-                    .map(id -> "Same pageId=" + id + " is configured for this files:\n" + Arrays
-                            .stream(targets)
-                            .filter(target -> id.equals(target.pageId))
-                            .map(target -> "  " + target.file.getPath())
-                            .collect(Collectors.joining("\n")))
-                    .collect(Collectors.joining("\n")));
-        }
-
-        return Optional.empty();
-    }
-
-
-    public static class UpdateTarget {
-        public final File file;
-        public final String pageId;
-
-        @JsonCreator
-        UpdateTarget(
-                @JsonProperty("file")
-                File file,
-                @JsonProperty("pageId")
-                String pageId) {
-
-            this.file = file;
-            this.pageId = pageId;
-        }
-
     }
 
 }

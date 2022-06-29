@@ -6,16 +6,16 @@ import org.junit.jupiter.api.Test;
 import org.powermock.reflect.Whitebox;
 import ru.kbakaras.cop.adoc.ConfluenceConverter;
 
-public class Test_Conversion {
+class ConversionTest {
 
     @Test
-    void formatWidth_CorrectIntValue_CorrectString() throws Exception {
+    void formatWidth_CorrectIntValue_CorrectString() {
 
         Assertions.assertEquals("width: 22.0%; ", formatWidth(22));
     }
 
     @Test
-    void formatWidth_CorrectStringValue_CorrectString() throws Exception {
+    void formatWidth_CorrectStringValue_CorrectString() {
 
         Assertions.assertEquals("width: 23.0%; ", formatWidth("23"));
         Assertions.assertEquals("width: 24.0%; ", formatWidth("24%"));

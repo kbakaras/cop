@@ -1,6 +1,7 @@
 package ru.kbakaras.cop;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import picocli.CommandLine;
 import ru.kbakaras.cop.confluence.ConfluenceApi;
 import ru.kbakaras.cop.confluence.dto.Content;
@@ -10,6 +11,7 @@ import ru.kbakaras.cop.model.PageSource;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
+import java.util.Map;
 import java.util.concurrent.Callable;
 
 @CommandLine.Command(
@@ -23,60 +25,95 @@ public class PublishCommand implements Callable<Integer> {
     @CommandLine.ParentCommand
     private ConfluencePublisher parent;
 
-    @CommandLine.Option(names = {"-f", "--file"}, description = "Path to file with page to publish", required = true)
+    @CommandLine.Option(names = {"--list-file"}, description = "Path to file with list of files to publish")
+    private File listFile;
+
+    @CommandLine.Option(names = {"-f", "--file"}, description = "Path to file with page to publish")
     private File file;
 
-    @CommandLine.Option(names = {"-r", "--parent-id"}, description = "Confluence's parent page id", required = true)
-    String parentId;
+    @CommandLine.Option(names = {"-r", "--parent-id"}, description = "Confluence's parent page id")
+    private String parentId;
+
+    @CommandLine.Option(names = {"-p", "--title-prefix"}, description = "Prefix to add to title of page being published")
+    private String titlePrefix;
+
+    @CommandLine.Option(names = {"--test-run"}, description = "Delete published page if --test-run flag is set", defaultValue = "false")
+    private boolean testRun;
 
 
     @Override
     public Integer call() throws Exception {
 
-        // Конвертация исходной страницы в формат хранения Confluence
-        PageSource pageSource = parent.convertPageSource(file);
+        parent.checkListFileOrFileIsSupplied(listFile, file, log);
+
+        UpdateTarget[] targets = listFile != null
+                ? UpdateTarget.readTargets(listFile)
+                : UpdateTarget.publishTarget(file);
+
+        MutableBoolean stop = new MutableBoolean(false);
+
+        Map<String, PageSource> newPages = parent.convertTargets(targets, titlePrefix, log, stop);
 
         try (ConfluenceApi api = parent.confluenceApi()) {
 
-            // region Поиск в пространстве Confluence страницы с таким же заголовком
-            ContentList contentList = api.findContentByTitle(pageSource.title);
-            if (contentList.getSize() > 0) {
-                throw new IllegalArgumentException(String.format(
-                        "Page with same title ('%s') already exists in space '%s'",
-                        pageSource.title, parent.spaceKey));
+            // region Поиск в пространстве Confluence страниц с совпадающими заголовками
+            for (UpdateTarget target : targets) {
+
+                PageSource pageSource = newPages.get(target.pageId);
+
+                ContentList contentList = api.findContentByTitle(pageSource.title);
+                if (contentList.getSize() > 0) {
+                    log.error("Page with same title as '" + pageSource.title + "' already exists in space " + parent.spaceKey);
+                    stop.setTrue();
+                }
             }
             // endregion
 
-
-            // region Создание страницы
-            pageSource
-                    .attachmentSourceList
-                    .forEach(attachmentSource -> attachmentSource.setVersionAtSave(1));
-
-            Content content = new Content();
-            parent.setContentValue(content, pageSource, parentId);
-
-            Content newContent = api.createContent(content);
-            if (pageSource.differentContent(newContent.getBody().getStorage().getValue())) {
-                log.warn("SHA1 of published content differs from converted, check converter");
+            if (stop.booleanValue()) {
+                throw new IllegalArgumentException();
             }
 
-            api.setDefaultAppearance(newContent);
-            // endregion
+            for (UpdateTarget target : targets) {
 
+                PageSource pageSource = newPages.get(target.pageId);
+                log.info("Publishing page '{}' from '{}'", pageSource.title, target.file);
 
-            // region Загрузка изображений
-            pageSource
-                    .attachmentSourceList
-                    .forEach(imageSource -> {
-                        try {
-                            api.createAttachment(newContent.getId(), imageSource.name, imageSource.mime, imageSource.data);
-                        } catch (URISyntaxException | IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-            // endregion
+                // region Создание страницы
+                pageSource
+                        .attachmentSourceList
+                        .forEach(attachmentSource -> attachmentSource.setVersionAtSave(1));
 
+                Content content = new Content();
+                parent.setContentValue(content, pageSource, parentId);
+
+                Content newContent = api.createContent(content);
+                if (pageSource.differentContent(newContent.getBody().getStorage().getValue())) {
+                    log.warn("  SHA1 of published content differs from converted, check converter");
+                }
+                // endregion
+
+                // region Загрузка изображений
+                pageSource
+                        .attachmentSourceList
+                        .forEach(is -> {
+                            try {
+                                log.info("  publishing new attachment '{}'", is.name);
+                                api.createAttachment(newContent.getId(), is.name, is.mime, is.data);
+                            } catch (URISyntaxException | IOException e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
+                // endregion
+
+                api.setDefaultAppearance(newContent);
+
+                if (testRun) {
+                    log.info("  TEST RUN: trashing published page '{}'", newContent.getTitle());
+                    api.trashContentById(newContent.getId());
+                    log.info("  TEST RUN:  purging published page '{}'", newContent.getTitle());
+                    api.purgeContentById(newContent.getId());
+                }
+            }
         }
 
         return 0;

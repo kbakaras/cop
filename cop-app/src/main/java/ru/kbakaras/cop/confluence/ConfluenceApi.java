@@ -158,6 +158,25 @@ public class ConfluenceApi implements Closeable {
     }
 
 
+    public void trashContentById(String contentId) throws URISyntaxException, IOException {
+
+        URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + contentId);
+
+        SugarRestClient.Response response = client.delete(uriBuilder.toString());
+
+        response.assertStatusCode(204);
+    }
+
+    public void purgeContentById(String contentId) throws URISyntaxException, IOException {
+
+        URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + contentId)
+                .addParameter("status", "trashed");
+
+        SugarRestClient.Response response = client.delete(uriBuilder.toString());
+
+        response.assertStatusCode(204);
+    }
+
     private static String normalizeBaseUrl(String url) {
         return url.endsWith("/")
                 ? url.substring(0, url.length() - 1)

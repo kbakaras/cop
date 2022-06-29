@@ -2,11 +2,13 @@ package ru.kbakaras.cop;
 
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.asciidoctor.Asciidoctor;
 import org.asciidoctor.Options;
 import org.asciidoctor.SafeMode;
 import org.htmlcleaner.ContentNode;
 import org.htmlcleaner.TagNode;
+import org.slf4j.Logger;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 import ru.kbakaras.cop.adoc.ConfluenceConverter;
@@ -25,7 +27,6 @@ import ru.kbakaras.sugar.restclient.SugarRestIdentityBasic;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.text.MessageFormat;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,8 +42,7 @@ import java.util.concurrent.Callable;
         subcommands = {
                 PublishCommand.class,
                 UpdateCommand.class
-        }
-)
+        })
 public class ConfluencePublisher implements Callable<Integer> {
 
     @Option(names = {"-b", "--base-url"}, description = "Base url for Confluence", required = true)
@@ -85,6 +85,35 @@ public class ConfluencePublisher implements Callable<Integer> {
         content.setBody(contentBody);
     }
 
+    void checkListFileOrFileIsSupplied(File listFile, File file, Logger log) {
+
+        if (listFile == null && file == null) {
+            throw new IllegalArgumentException("Either [file] or [list-file] parameter has to be supplied");
+        }
+
+        if (listFile != null && file != null) {
+            log.warn("Parameter [file] is ignored if [list-file] was supplied");
+        }
+    }
+
+    Map<String, PageSource> convertTargets(UpdateTarget[] targets, String titlePrefix, Logger log, MutableBoolean stop) {
+
+        Map<String, PageSource> result = new HashMap<>();
+
+        for (UpdateTarget target : targets) {
+            try {
+                log.info("Running asciidoctor conversion of '{}'", target.file);
+                result.put(target.pageId, convertPageSource(target.file, titlePrefix));
+
+            } catch (Exception e) {
+                log.error("Asciidoctor conversion of '" + target.file + "' failed", e);
+                stop.setTrue();
+            }
+        }
+
+        return result;
+    }
+
     /**
      * Метод вызывается из команд публикации/обновления страницы. Он исполняет последовательность действий:
      * <ol>
@@ -96,11 +125,7 @@ public class ConfluencePublisher implements Callable<Integer> {
      * В итоге на выходе получается объект {@link PageSource}, содержащий структурированное содержимое
      * страницы, подготовленное к публикации через api Confluence.
      */
-    PageSource convertPageSource(File file) throws IOException {
-
-        if (!file.exists()) {
-            throw new IllegalArgumentException(MessageFormat.format("File %s not found", file));
-        }
+    PageSource convertPageSource(File file, String titlePrefix) throws IOException {
 
         String pageContentSource = FileUtils.readFileToString(file, StandardCharsets.UTF_8);
 
@@ -110,8 +135,10 @@ public class ConfluencePublisher implements Callable<Integer> {
         asciidoctor.requireLibrary("asciidoctor-diagram");
 
 
-        String pageTitle = asciidoctor.load(pageContentSource, Options.builder().parseHeaderOnly(true).build())
+        String pageTitle = Optional.ofNullable(titlePrefix).orElse("") + asciidoctor
+                .load(pageContentSource, Options.builder().parseHeaderOnly(true).build())
                 .getDoctitle();
+
         String pageContent = asciidoctor.convert(pageContentSource, Options.builder()
                 .backend("confluence")
                 .toFile(false)
@@ -209,8 +236,11 @@ public class ConfluencePublisher implements Callable<Integer> {
     private static class ExceptionHandler implements CommandLine.IExecutionExceptionHandler {
 
         @Override
-        public int handleExecutionException(Exception e, CommandLine commandLine, CommandLine.ParseResult parseResult) throws Exception {
-            commandLine.getErr().println(e.getClass().getSimpleName() + ":\n" + e.getMessage());
+        public int handleExecutionException(Exception e, CommandLine commandLine, CommandLine.ParseResult parseResult) {
+
+            commandLine.getErr().println(
+                    e.getClass().getSimpleName() +
+                            Optional.ofNullable(e.getMessage()).map(m -> ":\n" + m).orElse(": ^^^"));
             return 1;
         }
     }

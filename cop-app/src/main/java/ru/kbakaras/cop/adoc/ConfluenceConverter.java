@@ -1,5 +1,6 @@
 package ru.kbakaras.cop.adoc;
 
+import lombok.extern.slf4j.Slf4j;
 import org.asciidoctor.ast.Block;
 import org.asciidoctor.ast.Column;
 import org.asciidoctor.ast.ContentNode;
@@ -25,6 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+@Slf4j
 @ConverterFor("confluence")
 public class ConfluenceConverter extends StringConverter {
 
@@ -270,6 +272,10 @@ public class ConfluenceConverter extends StringConverter {
             builder.append("</ac:structured-macro>");
 
             return builder.toString();
+
+        } else {
+            log.warn("Node '{}: {}' with transform '{}' ignored",
+                    node.getClass().getSimpleName(), node.getNodeName(), transform);
         }
 
         return null;

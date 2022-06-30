@@ -39,10 +39,21 @@ public class UpdateTarget {
 
         if (!listFile.isFile()) {
             throw new IllegalArgumentException(MessageFormat.format(
-                    "Supplied [list-file] '{0}' cannot be read", listFile));
+                    "Supplied [list-file] ''{0}'' cannot be read", listFile));
         }
 
-        return checkForClash(YAML_MAPPER.get().readValue(listFile, UpdateTarget[].class));
+        UpdateTarget[] targets = YAML_MAPPER.get().readValue(listFile, UpdateTarget[].class);
+
+        File baseDir = listFile.getAbsoluteFile().getParentFile();
+        for (int i = 0; i < targets.length; i++) {
+            if (!targets[i].file.isAbsolute()) {
+                targets[i] = new UpdateTarget(
+                        new File(baseDir, targets[i].file.getPath()).getCanonicalFile(),
+                        targets[i].pageId);
+            }
+        }
+
+        return checkForClash(checkFiles(targets));
     }
 
     public static UpdateTarget[] publishTarget(File file) {
@@ -63,10 +74,26 @@ public class UpdateTarget {
 
         if (!file.isFile()) {
             throw new IllegalArgumentException(MessageFormat.format(
-                    "Supplied [file] '{0}' cannot be read", file));
+                    "Page file ''{0}'' cannot be read", file));
         }
 
         return file;
+    }
+
+    private static UpdateTarget[] checkFiles(UpdateTarget[] targets) {
+
+        String message = Arrays
+                .stream(targets)
+                .map(target -> target.file)
+                .filter(file -> !file.isFile())
+                .map(file -> MessageFormat.format("  File ''{0}'' cannot be read", file))
+                .collect(Collectors.joining("\n"));
+
+        if (!message.isBlank()) {
+            throw new IllegalArgumentException("Some page files cannot be read:\n" + message);
+        }
+
+        return targets;
     }
 
     private static UpdateTarget[] checkForClash(UpdateTarget[] targets) {

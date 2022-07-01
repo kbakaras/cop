@@ -51,7 +51,7 @@ public class ConfluencePublisher implements Callable<Integer> {
     @Option(names = {"-l", "--login"}, description = "Confluence user login", required = true)
     private String login;
 
-    @Option(names = {"-p", "--password"},
+    @Option(names = {"-p", "--password", "--token"},
             description = "Confluence user password or access token",
             required = true,
             arity = "0..1",

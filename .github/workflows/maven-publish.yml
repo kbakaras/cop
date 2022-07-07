@@ -3,9 +3,12 @@
 
 name: Maven Package
 
+#on:
+#  release:
+#    types: [created]
 on:
-  release:
-    types: [created]
+  push:
+    branches: '**'
 
 env:
   REGISTRY: ghcr.io
@@ -26,16 +29,15 @@ jobs:
       with:
         java-version: '11'
         distribution: 'temurin'
-        server-id: github # Value of the distributionManagement/repository/id field of the pom.xml
-        settings-path: ${{ github.workspace }} # location for the settings.xml file
+        server-id: sugar # Value of the distributionManagement/repository/id field of the pom.xml
+        server-username: SUGAR_USER
+        server-password: SUGAR_PASSWORD
 
     - name: Build with Maven
       run: mvn -B package -Pjar --file pom.xml
-
-    - name: Publish to GitHub Packages Apache Maven
-      run: mvn deploy -s $GITHUB_WORKSPACE/settings.xml
       env:
-        GITHUB_TOKEN: ${{ github.token }}
+        SUGAR_USER: kbakaras
+        SUGAR_PASSWORD: ${{ secrets.SUGAR_READ }}
 
     - name: Log in to the Container registry
       uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9

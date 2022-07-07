@@ -12,4 +12,5 @@ ENV JAVA_OPTS="-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=75 \
                -XX:MinMetaspaceFreeRatio=10 -XX:MaxMetaspaceFreeRatio=100 \
                -XX:MaxDirectMemorySize=64M"
 
-ENTRYPOINT []
+ENTRYPOINT ["java", "-jar", "/opt/cop/cop.jar"]
+CMD ["--help"]

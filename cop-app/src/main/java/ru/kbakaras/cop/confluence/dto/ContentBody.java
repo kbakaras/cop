@@ -11,7 +11,6 @@ import lombok.NoArgsConstructor;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ContentBody {
 
-    private ContentBodyValue view;
     private ContentBodyValue storage;
 
 }

@@ -7,12 +7,14 @@ import ru.kbakaras.cop.confluence.ConfluenceApi;
 import ru.kbakaras.cop.confluence.dto.Content;
 import ru.kbakaras.cop.confluence.dto.ContentList;
 import ru.kbakaras.cop.model.PageSource;
+import ru.kbakaras.sugar.restclient.StatusAssertionFailed;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.TimeUnit;
 
 @CommandLine.Command(
         name = "publish",
@@ -21,6 +23,10 @@ import java.util.concurrent.Callable;
 )
 @Slf4j
 public class PublishCommand implements Callable<Integer> {
+
+    private static final int ATTEMPT_COUNT = 3;
+    private static final long ATTEMPT_SLEEP_SECONDS = 2;
+
 
     @CommandLine.ParentCommand
     private ConfluencePublisher parent;
@@ -110,8 +116,26 @@ public class PublishCommand implements Callable<Integer> {
                 if (testRun) {
                     log.info("  TEST RUN: trashing published page '{}'", newContent.getTitle());
                     api.trashContentById(newContent.getId());
-                    log.info("  TEST RUN:  purging published page '{}'", newContent.getTitle());
-                    api.purgeContentById(newContent.getId());
+
+                    for (int attempt = 1; attempt <= ATTEMPT_COUNT; attempt++) {
+
+                        // Иногда Confluence отказывает (возвращает ошибку со статусом 500) на шаге purge.
+                        // Поэтому тут предпринимается несколько попыток выполнить purge. И даже если ни
+                        // одна из них не увенчается успехом, это не критично для сборки и можно игнорировать.
+
+                        try {
+                            log.info("  TEST RUN:  purging published page '{}'", newContent.getTitle());
+                            api.purgeContentById(newContent.getId());
+                            break;
+
+                        } catch (StatusAssertionFailed e) {
+                            log.warn("  TEST RUN:  purging published page '{}' failed", newContent.getTitle(), e);
+
+                            try {
+                                TimeUnit.SECONDS.sleep(ATTEMPT_SLEEP_SECONDS);
+                            } catch (InterruptedException ignore) {}
+                        }
+                    }
                 }
             }
         }

@@ -103,7 +103,10 @@ public class ConfluenceConverter extends StringConverter {
             table.getHeader().forEach(row -> {
                 tableBuilder.append("<tr>\n");
                 row.getCells().forEach(cell -> {
-                    tableBuilder.append("<th>");
+                    String style = cell.getHorizontalAlignment() != Table.HorizontalAlignment.LEFT
+                            ? " style='text-align: " + cell.getHorizontalAlignment().name().toLowerCase() + ";'"
+                            : "";
+                    tableBuilder.append("<th").append(style).append(">");
                     tableBuilder.append(cell.getText());
                     tableBuilder.append("</th>\n");
                 });
@@ -116,7 +119,10 @@ public class ConfluenceConverter extends StringConverter {
                     String span = StringUtils.join(" ",
                             cell.getColspan() > 0 ? " colspan='" + cell.getColspan() + "'" : "",
                             cell.getRowspan() > 0 ? " rowspan='" + cell.getRowspan() + "'" : "");
-                    tableBuilder.append("<td").append(span).append(">");
+                    String style = cell.getHorizontalAlignment() != Table.HorizontalAlignment.LEFT
+                            ? " style='text-align: " + cell.getHorizontalAlignment().name().toLowerCase() + ";'"
+                            : "";
+                    tableBuilder.append("<td").append(span).append(style).append(">");
                     if ("asciidoc".equals(cell.getStyle())) {
                         tableBuilder.append(cell.getContent());
                     } else {

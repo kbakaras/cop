@@ -141,7 +141,7 @@ public class ConfluencePublisher implements Callable<Integer> {
 
         String pageContent = asciidoctor.convert(pageContentSource, Options.builder()
                 .backend("confluence")
-                .baseDir(file.getParentFile())
+                .baseDir(file.getAbsoluteFile().getParentFile())
                 .toFile(false)
                 .safe(SafeMode.UNSAFE)
                 .build());
@@ -151,7 +151,7 @@ public class ConfluencePublisher implements Callable<Integer> {
 
         TagNode node = PageSource.cleanContent(pageContent);
 
-        File attachmentDir = file.getParentFile();
+        File attachmentDir = file.getAbsoluteFile().getParentFile();
         Map<File, AttachmentSource> attachments = new HashMap<>();
 
         List<? extends TagNode> linkNodes =

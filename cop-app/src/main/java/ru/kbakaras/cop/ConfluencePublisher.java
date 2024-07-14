@@ -141,6 +141,7 @@ public class ConfluencePublisher implements Callable<Integer> {
 
         String pageContent = asciidoctor.convert(pageContentSource, Options.builder()
                 .backend("confluence")
+                .baseDir(file.getParentFile())
                 .toFile(false)
                 .safe(SafeMode.UNSAFE)
                 .build());

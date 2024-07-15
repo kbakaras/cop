@@ -5,7 +5,7 @@ RUN mkdir -p /opt/cop && \
     echo 'exec java $JAVA_OPTS -jar /opt/cop/cop.jar "$@"' >> /bin/cop.sh && \
     chmod +x /bin/cop.sh
 
-RUN apt-get update && apt-get install -y libfreetype6
+RUN apt-get update && apt-get install -y libfreetype6 fontconfig
 
 COPY cop-app/target/cop.jar /opt/cop/cop.jar
 

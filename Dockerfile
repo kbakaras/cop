@@ -5,6 +5,8 @@ RUN mkdir -p /opt/cop && \
     echo 'exec java $JAVA_OPTS -jar /opt/cop/cop.jar "$@"' >> /bin/cop.sh && \
     chmod +x /bin/cop.sh
 
+RUN apt-get update && apt-get install -y libfreetype6
+
 COPY cop-app/target/cop.jar /opt/cop/cop.jar
 
 ENV JAVA_OPTS="-XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=75 \

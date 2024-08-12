@@ -5,7 +5,10 @@ RUN mkdir -p /opt/cop && \
     echo 'exec java $JAVA_OPTS -jar /opt/cop/cop.jar "$@"' >> /bin/cop.sh && \
     chmod +x /bin/cop.sh
 
-RUN apt-get update && apt-get install -y libfreetype6 fontconfig graphviz
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends libfreetype6 fontconfig graphviz && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 COPY cop-app/target/cop.jar /opt/cop/cop.jar
 

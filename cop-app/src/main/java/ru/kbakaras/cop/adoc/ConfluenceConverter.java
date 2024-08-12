@@ -140,9 +140,7 @@ public class ConfluenceConverter extends StringConverter {
 
         } else if (transform.equals("paragraph")) {
             StructuralNode block = (StructuralNode) node;
-            String content = block.getContent().toString();
-
-            return "<p>" + content.replaceAll(LINE_SEPARATOR, " ") + "</p>\n";
+            return formatParagraph(block.getContent().toString());
 
         } else if (transform.equals("preamble")) {
 
@@ -240,12 +238,12 @@ public class ConfluenceConverter extends StringConverter {
 
             return builder.toString();
 
-        } else if (transform.equals("list_item")) {
+        } else if (node instanceof ListItem) {
 
             ListItem item = (ListItem) node;
 
             if (item.hasText()) {
-                StringBuilder builder = new StringBuilder(item.getText());
+                StringBuilder builder = new StringBuilder(formatParagraph(item.getText()));
                 for (StructuralNode itemNode: item.getBlocks()) {
                     builder.append(itemNode.convert());
                 }
@@ -285,6 +283,10 @@ public class ConfluenceConverter extends StringConverter {
         }
 
         return null;
+    }
+
+    private String formatParagraph(String text) {
+        return "<p>" + text.replaceAll(LINE_SEPARATOR, " ") + "</p>\n";
     }
 
     private Stream<String> columnStyles(Collection<Column> columns, int tableWidth) {

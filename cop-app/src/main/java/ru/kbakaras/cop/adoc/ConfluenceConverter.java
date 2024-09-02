@@ -48,7 +48,18 @@ public class ConfluenceConverter extends StringConverter {
         if (node instanceof Document) {
             Document document = (Document) node;
 
-            return (document.hasAttribute("toc") ? toc(document.getTitle()) : "") + document.getContent();
+            StringBuilder result = new StringBuilder();
+
+            Optional.ofNullable(document.getAttribute("disclaimer"))
+                    .map(Object::toString)
+                    .map(ConfluenceConverter::disclaimer)
+                    .ifPresent(result::append);
+
+            if (document.hasAttribute("toc")) {
+                result.append(toc(document.getTitle()));
+            }
+
+            return result.append(document.getContent()).toString();
 
         } else if (node instanceof Section) {
             Section section = (Section) node;
@@ -297,6 +308,15 @@ public class ConfluenceConverter extends StringConverter {
                 .mapToInt(Column::getWidth)
                 .map(width -> tableWidth * width / sum)
                 .mapToObj(ConfluenceConverter::formatWidth);
+    }
+
+    private static String disclaimer(String disclaimer) {
+
+        String macroId = UUID.nameUUIDFromBytes(disclaimer.getBytes()).toString();
+
+        return String.format("<ac:structured-macro ac:name='%s' ac:schema-version='1' ac:macro-id='%s'>" +
+                "<ac:rich-text-body>%s</ac:rich-text-body>" +
+                "</ac:structured-macro>", "note", macroId, disclaimer);
     }
 
     private static String toc(String documentTitle) {

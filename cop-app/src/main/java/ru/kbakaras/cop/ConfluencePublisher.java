@@ -4,6 +4,7 @@ import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.asciidoctor.Asciidoctor;
+import org.asciidoctor.Attributes;
 import org.asciidoctor.Options;
 import org.asciidoctor.SafeMode;
 import org.htmlcleaner.ContentNode;
@@ -60,6 +61,9 @@ public class ConfluencePublisher implements Callable<Integer> {
 
     @Option(names = {"-s", "--space"}, description = "Target space", required = true)
     String spaceKey;
+
+    @Option(names = {"-a", "--attribute"}, description = "Attribute overrides")
+    Map<String, Object> attributes;
 
 
     @SneakyThrows
@@ -144,6 +148,7 @@ public class ConfluencePublisher implements Callable<Integer> {
                 .baseDir(file.getAbsoluteFile().getParentFile())
                 .toFile(false)
                 .safe(SafeMode.UNSAFE)
+                .attributes(Attributes.builder().attributes(attributes).build())
                 .build());
 
         asciidoctor.shutdown();

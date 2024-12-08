@@ -4,7 +4,9 @@ import org.apache.commons.io.IOUtils;
 import org.asciidoctor.Asciidoctor;
 import org.asciidoctor.Options;
 import org.asciidoctor.SafeMode;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import ru.kbakaras.cop.adoc.ConfluenceConverter;
 
@@ -13,6 +15,22 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 
 class ConfluenceConverterTest {
+
+    private static Asciidoctor asciidoctor;
+
+
+    @BeforeAll
+    static void init() {
+        asciidoctor = Asciidoctor.Factory.create();
+        asciidoctor.javaConverterRegistry().register(ConfluenceConverter.class);
+    }
+
+    @AfterAll
+    static void done() {
+        asciidoctor.shutdown();
+        asciidoctor.close();
+    }
+
 
     @Test
     void paragraphsInTableCell() throws IOException {
@@ -24,6 +42,10 @@ class ConfluenceConverterTest {
         read("Абзацы и переводы строк в элементах перечня");
     }
 
+    @Test
+    void paragraphsInAdmonitions() throws IOException {
+        read("Абзацы и переводы строк в блоке примечания");
+    }
 
     @Test
     void sectionNumbers() throws IOException {
@@ -42,23 +64,18 @@ class ConfluenceConverterTest {
             String source = IOUtils.toString(isSource, StandardCharsets.UTF_8);
             String expected = IOUtils.toString(isDest, StandardCharsets.UTF_8);
 
-            try (Asciidoctor asciidoctor = Asciidoctor.Factory.create()) {
-                asciidoctor.javaConverterRegistry().register(ConfluenceConverter.class);
 
-                String destination = asciidoctor.convert(source, Options.builder()
-                        .backend("confluence")
-                        .toFile(false)
-                        .safe(SafeMode.UNSAFE)
-                        .build());
+            String destination = asciidoctor.convert(source, Options.builder()
+                    .backend("confluence")
+                    .toFile(false)
+                    .safe(SafeMode.UNSAFE)
+                    .build());
 
-                if (!destination.endsWith("\n")) {
-                    destination = destination + "\n";
-                }
-
-                asciidoctor.shutdown();
-
-                Assertions.assertEquals(expected, destination);
+            if (!destination.endsWith("\n")) {
+                destination = destination + "\n";
             }
+
+            Assertions.assertEquals(expected, destination);
         }
 
     }

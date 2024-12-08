@@ -182,7 +182,9 @@ public class ConfluenceConverter extends StringConverter {
                     })
                     .orElse("info");
 
-            String content = block.getContent().toString();
+            String content = block.getContentModel().equals("compound")
+                    ? block.getContent().toString()
+                    : formatParagraph(block.getContent().toString());
             String macroId = UUID.nameUUIDFromBytes(content.getBytes()).toString();
 
             return String.format("<ac:structured-macro ac:name='%s' ac:schema-version='1' ac:macro-id='%s'>" +
@@ -310,6 +312,7 @@ public class ConfluenceConverter extends StringConverter {
         return "<p>" + text
                 .replaceAll(LINE_SEPARATOR, " ")
                 .replaceAll("\\s*<br/>\\s*", "<br/>")
+                .trim()
                 + "</p>\n";
     }
 

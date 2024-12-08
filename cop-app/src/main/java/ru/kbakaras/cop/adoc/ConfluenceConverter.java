@@ -15,6 +15,7 @@ import org.asciidoctor.ast.StructuralNode;
 import org.asciidoctor.ast.Table;
 import org.asciidoctor.converter.ConverterFor;
 import org.asciidoctor.converter.StringConverter;
+import org.jruby.RubyArray;
 import ru.kbakaras.sugar.utils.StringUtils;
 import ru.kbakaras.sugar.utils.UUIDComposer;
 
@@ -137,7 +138,14 @@ public class ConfluenceConverter extends StringConverter {
                     if ("asciidoc".equals(cell.getStyle())) {
                         tableBuilder.append(cell.getContent());
                     } else {
-                        tableBuilder.append(cell.getText());
+                        Object content = cell.getContent();
+                        if (content instanceof RubyArray) {
+                            for (Object el : (RubyArray<?>) content) {
+                                if (el instanceof String) {
+                                    tableBuilder.append(formatParagraph((String) el));
+                                }
+                            }
+                        }
                     }
                     tableBuilder.append("</td>\n");
                 });
@@ -297,7 +305,11 @@ public class ConfluenceConverter extends StringConverter {
     }
 
     private String formatParagraph(String text) {
-        return "<p>" + text.replaceAll(LINE_SEPARATOR, " ") + "</p>\n";
+
+        return "<p>" + text
+                .replaceAll(LINE_SEPARATOR, " ")
+                .replaceAll("\\s*<br/>\\s*", "<br/>")
+                + "</p>\n";
     }
 
     private Stream<String> columnStyles(Collection<Column> columns, int tableWidth) {

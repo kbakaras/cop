@@ -25,6 +25,12 @@ class ConfluenceConverterTest {
     }
 
 
+    @Test
+    void sectionNumbers() throws IOException {
+        read("Нумерация рубрик");
+    }
+
+
     private void read(String sourceFileName) throws IOException {
 
         try (InputStream isSource = this.getClass().getResourceAsStream("/source/" + sourceFileName + ".adoc");

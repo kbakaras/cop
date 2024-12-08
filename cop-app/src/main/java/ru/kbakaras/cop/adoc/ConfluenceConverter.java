@@ -186,8 +186,8 @@ public class ConfluenceConverter extends StringConverter {
             String macroId = UUID.nameUUIDFromBytes(content.getBytes()).toString();
 
             return String.format("<ac:structured-macro ac:name='%s' ac:schema-version='1' ac:macro-id='%s'>" +
-                            "<ac:rich-text-body>%s</ac:rich-text-body>" +
-                            "</ac:structured-macro>", type, macroId, content);
+                    "<ac:rich-text-body>%s</ac:rich-text-body>" +
+                    "</ac:structured-macro>", type, macroId, content);
 
         } else if (transform.equals("image")) {
             Block block = (Block) node;
@@ -264,7 +264,7 @@ public class ConfluenceConverter extends StringConverter {
 
             if (item.hasText()) {
                 StringBuilder builder = new StringBuilder(formatParagraph(item.getText()));
-                for (StructuralNode itemNode: item.getBlocks()) {
+                for (StructuralNode itemNode : item.getBlocks()) {
                     builder.append(itemNode.convert());
                 }
 
@@ -359,7 +359,7 @@ public class ConfluenceConverter extends StringConverter {
         UUID uuidExpand = UUID.nameUUIDFromBytes(documentTitle.getBytes());
         UUID uuidToc = composer.compose(uuidExpand);
 
-        return  "<ac:structured-macro ac:name='expand' ac:schema-version='1' ac:macro-id='" + uuidExpand + "'>" +
+        return "<ac:structured-macro ac:name='expand' ac:schema-version='1' ac:macro-id='" + uuidExpand + "'>" +
                 "<ac:parameter ac:name='title'>Оглавление</ac:parameter>" +
                 "<ac:rich-text-body>" +
                 "<ac:structured-macro ac:name='toc' ac:schema-version='1' ac:macro-id='" + uuidToc + "'>" +

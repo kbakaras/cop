@@ -25,6 +25,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Slf4j
@@ -66,7 +67,7 @@ public class ConfluenceConverter extends StringConverter {
             Section section = (Section) node;
             String level = Integer.toString(section.getLevel());
 
-            return "<h" + level + ">" + section.getTitle() + "</h" + level + ">" + LINE_SEPARATOR + section.getContent();
+            return "<h" + level + ">" + formatSectionTitle(section) + "</h" + level + ">" + LINE_SEPARATOR + section.getContent();
 
         } else if (node instanceof PhraseNode) {
             PhraseNode phrase = (PhraseNode) node;
@@ -310,6 +311,27 @@ public class ConfluenceConverter extends StringConverter {
                 .replaceAll(LINE_SEPARATOR, " ")
                 .replaceAll("\\s*<br/>\\s*", "<br/>")
                 + "</p>\n";
+    }
+
+    private String formatSectionTitle(Section section) {
+
+        String title = null;
+        Section current = section;
+
+        do {
+            title = Stream.of(current.getNumeral(), title)
+                    .filter(org.apache.commons.lang3.StringUtils::isNotEmpty)
+                    .collect(Collectors.joining("."));
+
+            current = current.getParent() instanceof Section
+                    ? (Section) current.getParent()
+                    : null;
+
+        } while (current != null);
+
+        return Stream.of(title, section.getTitle())
+                .filter(org.apache.commons.lang3.StringUtils::isNotEmpty)
+                .collect(Collectors.joining(". "));
     }
 
     private Stream<String> columnStyles(Collection<Column> columns, int tableWidth) {

@@ -52,6 +52,11 @@ class ConfluenceConverterTest {
         read("Нумерация рубрик");
     }
 
+    @Test
+    void anchorsAndLinks() throws IOException {
+        read("Локальные ссылки и якоря");
+    }
+
 
     private void read(String sourceFileName) throws IOException {
 

@@ -47,6 +47,13 @@ public class ConfluenceConverter extends StringConverter {
             transform = node.getNodeName();
         }
 
+        if (transform.equals("inline_anchor")) {
+            String anchorId = node.getId();
+            if (anchorId != null) {
+                return anchor(anchorId);
+            }
+        }
+
         if (node instanceof Document) {
             Document document = (Document) node;
 
@@ -67,7 +74,17 @@ public class ConfluenceConverter extends StringConverter {
             Section section = (Section) node;
             String level = Integer.toString(section.getLevel());
 
-            return "<h" + level + ">" + formatSectionTitle(section) + "</h" + level + ">" + LINE_SEPARATOR + section.getContent();
+            StringBuilder result = new StringBuilder("<h" + level + ">");
+            if (node.getId() != null) {
+                result.append(anchor(node.getId()));
+            }
+
+            return result
+                    .append(formatSectionTitle(section))
+                    .append("</h").append(level).append(">")
+                    .append(LINE_SEPARATOR)
+                    .append(section.getContent())
+                    .toString();
 
         } else if (node instanceof PhraseNode) {
             PhraseNode phrase = (PhraseNode) node;
@@ -80,7 +97,9 @@ public class ConfluenceConverter extends StringConverter {
                 case "monospaced":
                     return "<code>" + phrase.getText() + "</code>";
                 case "link":
-                    return "<a href='" + phrase.getTarget() + "'>" + phrase.getReftext() + "</a>";
+                case "xref":
+                    String refText = Optional.ofNullable(phrase.getReftext()).orElse(phrase.getTarget());
+                    return "<a href='" + phrase.getTarget() + "'>" + refText + "</a>";
                 case "line":
                     return phrase.getText() + "<br/>";
                 default:
@@ -354,6 +373,19 @@ public class ConfluenceConverter extends StringConverter {
         return String.format("<ac:structured-macro ac:name='%s' ac:schema-version='1' ac:macro-id='%s'>" +
                 "<ac:rich-text-body>%s</ac:rich-text-body>" +
                 "</ac:structured-macro>", "note", macroId, disclaimer);
+    }
+
+    private static String anchor(String anchorId) {
+
+        assert anchorId != null;
+
+        UUIDComposer composer = new UUIDComposer(UUID.fromString("7413e515-3d6f-40e9-9ed4-0157f9afee9b"));
+        UUID uuidExpand = UUID.nameUUIDFromBytes(anchorId.getBytes());
+        UUID uuidAnchor = composer.compose(uuidExpand);
+
+        return "<ac:structured-macro ac:name='anchor' ac:schema-version='1' ac:macro-id='" + uuidAnchor + "'>" +
+                "<ac:parameter ac:name=''>" + anchorId + "</ac:parameter>" +
+                "</ac:structured-macro>";
     }
 
     private static String toc(String documentTitle) {

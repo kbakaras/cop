@@ -2,10 +2,13 @@ package ru.kbakaras.cop;
 
 import lombok.SneakyThrows;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.asciidoctor.Asciidoctor;
 import org.asciidoctor.Attributes;
+import org.asciidoctor.AttributesBuilder;
 import org.asciidoctor.Options;
+import org.asciidoctor.OptionsBuilder;
 import org.asciidoctor.SafeMode;
 import org.htmlcleaner.ContentNode;
 import org.htmlcleaner.TagNode;
@@ -27,6 +30,8 @@ import ru.kbakaras.sugar.restclient.SugarRestIdentityBasic;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
@@ -169,7 +174,7 @@ public class ConfluencePublisher implements Callable<Integer> {
         for (TagNode linkNode : linkNodes) {
 
             String href = linkNode.getAttributeByName("href");
-            if (!isAbsoluteUri(href)) {
+            if (!isAbsoluteUri(href) && !isFragmentUri(href)) {
 
                 File attachmentFile = new File(attachmentDir, href);
                 TagNode riAttachment = new TagNode("ri:attachment");
@@ -238,9 +243,14 @@ public class ConfluencePublisher implements Callable<Integer> {
     }
 
 
-    public static boolean isAbsoluteUri(String href) {
+    private static boolean isAbsoluteUri(String href) {
         //noinspection HttpUrlsUsage
         return href.startsWith("http://") || href.startsWith("https://");
+    }
+
+    @SneakyThrows(URISyntaxException.class)
+    private static boolean isFragmentUri(String href) {
+        return StringUtils.isNotBlank(new URI(href).getFragment());
     }
 
     private static class ExceptionHandler implements CommandLine.IExecutionExceptionHandler {

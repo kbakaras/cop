@@ -143,13 +143,17 @@ public class ConfluencePublisher implements Callable<Integer> {
                 .load(pageContentSource, Options.builder().parseHeaderOnly(true).build())
                 .getDoctitle();
 
-        String pageContent = asciidoctor.convert(pageContentSource, Options.builder()
+        OptionsBuilder options = Options.builder()
                 .backend("confluence")
                 .baseDir(file.getAbsoluteFile().getParentFile())
                 .toFile(false)
-                .safe(SafeMode.UNSAFE)
-                .attributes(Attributes.builder().attributes(attributes).build())
-                .build());
+                .safe(SafeMode.UNSAFE);
+        Optional.ofNullable(attributes)
+                .map(Attributes.builder()::attributes)
+                .map(AttributesBuilder::build)
+                .ifPresent(options::attributes);
+
+        String pageContent = asciidoctor.convert(pageContentSource, options.build());
 
         asciidoctor.shutdown();
         // endregion

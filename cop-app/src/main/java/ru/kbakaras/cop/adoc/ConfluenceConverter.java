@@ -338,18 +338,27 @@ public class ConfluenceConverter extends StringConverter {
     private String formatSectionTitle(Section section) {
 
         String title = null;
-        Section current = section;
 
-        do {
-            title = Stream.of(current.getNumeral(), title)
-                    .filter(org.apache.commons.lang3.StringUtils::isNotEmpty)
-                    .collect(Collectors.joining("."));
+        boolean needsNumber = section.isNumbered() && Optional
+                .ofNullable((String) section.getDocument().getAttribute("sectnumlevels"))
+                .map(Integer::parseInt)
+                .filter(maxLevel -> section.getLevel() > maxLevel)
+                .isEmpty();
 
-            current = current.getParent() instanceof Section
-                    ? (Section) current.getParent()
-                    : null;
+        if (needsNumber) {
+            Section current = section;
 
-        } while (current != null);
+            do {
+                title = Stream.of(current.getNumeral(), title)
+                        .filter(org.apache.commons.lang3.StringUtils::isNotEmpty)
+                        .collect(Collectors.joining("."));
+
+                current = current.getParent() instanceof Section
+                        ? (Section) current.getParent()
+                        : null;
+
+            } while (current != null);
+        }
 
         return Stream.of(title, section.getTitle())
                 .filter(org.apache.commons.lang3.StringUtils::isNotEmpty)

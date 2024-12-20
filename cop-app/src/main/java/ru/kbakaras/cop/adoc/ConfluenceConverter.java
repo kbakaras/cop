@@ -19,8 +19,10 @@ import org.jruby.RubyArray;
 import ru.kbakaras.sugar.utils.StringUtils;
 import ru.kbakaras.sugar.utils.UUIDComposer;
 
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -225,10 +227,16 @@ public class ConfluenceConverter extends StringConverter {
             Optional.ofNullable(block.getAttribute("width"))
                     .ifPresent(width -> imageBuilder.append(" ac:width='").append(width).append("'"));
 
+            String path = Stream.of(block.getAttribute("imagesdir"), block.getAttribute("target"))
+                    .filter(Objects::nonNull)
+                    .map(Object::toString)
+                    .reduce((str1, str2) -> Path.of(str1, str2).toString())
+                    .orElse(null);
+
             imageBuilder
                     .append(">")
 
-                    .append("<ri:attachment ri:filename='").append(block.getAttribute("target")).append("'/>")
+                    .append("<ri:attachment ri:filename='").append(path).append("'/>")
                     .append("</ac:image>")
                     .append("</p>");
 

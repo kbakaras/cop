@@ -1,0 +1,6 @@
+:imagesdir: img
+
+= images dir is set
+
+image::img-1.jpg[]
+

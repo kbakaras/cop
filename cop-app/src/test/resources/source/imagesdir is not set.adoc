@@ -1,0 +1,4 @@
+= images dir is not set
+
+image::img-1.jpg[]
+

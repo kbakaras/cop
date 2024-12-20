@@ -57,6 +57,16 @@ class ConfluenceConverterTest {
         read("Локальные ссылки и якоря");
     }
 
+    @Test
+    void imagesdirIsSet() throws IOException {
+        read("imagesdir is set");
+    }
+
+    @Test
+    void imagesdirIsNotSet() throws IOException {
+        read("imagesdir is not set");
+    }
+
 
     private void read(String sourceFileName) throws IOException {
 

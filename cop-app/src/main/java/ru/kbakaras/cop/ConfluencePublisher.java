@@ -64,9 +64,6 @@ public class ConfluencePublisher implements Callable<Integer> {
             interactive = true)
     private char[] password;
 
-    @Option(names = {"-s", "--space"}, description = "Target space", required = true)
-    String spaceKey;
-
     @Option(names = {"-a", "--attribute"}, description = "Attribute overrides")
     Map<String, Object> attributes;
 
@@ -78,7 +75,7 @@ public class ConfluencePublisher implements Callable<Integer> {
     }
 
 
-    void setContentValue(Content content, PageSource pageSource, String parentId) {
+    void setContentValue(Content content, PageSource pageSource, String spaceKey, String parentId) {
         content.setTitle(pageSource.title);
         content.setType(Content.TYPE_Page);
 
@@ -222,7 +219,7 @@ public class ConfluencePublisher implements Callable<Integer> {
     }
 
     ConfluenceApi confluenceApi() {
-        return new ConfluenceApi(baseUrl, spaceKey,
+        return new ConfluenceApi(baseUrl,
                 new SugarRestClient(new SugarRestIdentityBasic() {
 
                     @Override

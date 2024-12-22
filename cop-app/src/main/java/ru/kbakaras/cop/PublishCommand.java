@@ -37,6 +37,9 @@ public class PublishCommand implements Callable<Integer> {
     @CommandLine.Option(names = {"-f", "--file"}, description = "Path to file with page to publish")
     private File file;
 
+    @CommandLine.Option(names = {"-s", "--space"}, description = "Target space", required = true)
+    String spaceKey;
+
     @CommandLine.Option(names = {"-r", "--parent-id"}, description = "Confluence's parent page id")
     private String parentId;
 
@@ -67,9 +70,9 @@ public class PublishCommand implements Callable<Integer> {
 
                 PageSource pageSource = newPages.get(target.pageId);
 
-                ContentList contentList = api.findContentByTitle(pageSource.title);
+                ContentList contentList = api.findContentByTitle(spaceKey, pageSource.title);
                 if (contentList.getSize() > 0) {
-                    log.error("Page with same title as '" + pageSource.title + "' already exists in space " + parent.spaceKey);
+                    log.error("Page with same title as '{}' already exists in space {}", pageSource.title, spaceKey);
                     stop.setTrue();
                 }
             }
@@ -90,7 +93,7 @@ public class PublishCommand implements Callable<Integer> {
                         .forEach(attachmentSource -> attachmentSource.setVersionAtSave(1));
 
                 Content content = new Content();
-                parent.setContentValue(content, pageSource, parentId);
+                parent.setContentValue(content, pageSource, spaceKey, parentId);
 
                 Content newContent = api.createContent(content);
                 if (pageSource.differentContent(newContent.getBody().getStorage().getValue())) {

@@ -64,7 +64,7 @@ public class UpdateCommand implements Callable<Integer> {
                     oldPages.put(target.pageId, api.getContentById(target.pageId));
 
                 } catch (Exception e) {
-                    log.error("Unable to fetch old content from Confluence by pageId=" + target.pageId, e);
+                    log.error("Unable to fetch old content from Confluence by pageId={}", target.pageId, e);
                     stop.setTrue();
                 }
             }
@@ -126,7 +126,7 @@ public class UpdateCommand implements Callable<Integer> {
                     Content content = new Content();
                     content.setVersion(oldContent.getVersion());
                     content.getVersion().setNumber(content.getVersion().getNumber() + 1);
-                    parent.setContentValue(content, pageSource, null);
+                    parent.setContentValue(content, pageSource, oldContent.getSpace().getKey(), null);
 
                     content = api.updateContent(oldContent.getId(), content);
 

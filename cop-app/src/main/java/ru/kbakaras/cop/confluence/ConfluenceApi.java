@@ -22,18 +22,16 @@ public class ConfluenceApi implements Closeable {
     private static final String EXPAND_CONTENT = "body.storage,version,container,metadata.properties.content_appearance_published,metadata.properties.content_appearance_draft";
 
     private final String baseUrl;
-    private final String spaceKey;
     private final SugarRestClient client;
 
 
-    public ConfluenceApi(String baseUrl, String spaceKey, SugarRestClient client) {
+    public ConfluenceApi(String baseUrl, SugarRestClient client) {
         this.baseUrl = normalizeBaseUrl(baseUrl);
-        this.spaceKey = spaceKey;
         this.client = client;
     }
 
 
-    public ContentList findContentByTitle(String pageTitle) throws URISyntaxException, IOException {
+    public ContentList findContentByTitle(String spaceKey, String pageTitle) throws URISyntaxException, IOException {
         URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content")
                 .addParameter("spaceKey", spaceKey)
                 .addParameter("title", pageTitle)

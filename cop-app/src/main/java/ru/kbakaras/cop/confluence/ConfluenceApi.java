@@ -19,7 +19,7 @@ import java.nio.charset.StandardCharsets;
 
 public class ConfluenceApi implements Closeable {
 
-    private static final String EXPAND_CONTENT = "body.storage,version,container,metadata.properties.content_appearance_published,metadata.properties.content_appearance_draft";
+    private static final String EXPAND_CONTENT = "body.storage,space,version,container,metadata.properties.content_appearance_published,metadata.properties.content_appearance_draft";
 
     private final String baseUrl;
     private final SugarRestClient client;
@@ -47,6 +47,7 @@ public class ConfluenceApi implements Closeable {
      * Получить страницу по идентификатору. Если страница по указанному идентификатору отсутствует, возвращает null.
      */
     public Content getContentById(String contentId) throws URISyntaxException, IOException {
+
         URIBuilder uriBuilder = new URIBuilder(baseUrl + "/rest/api/content/" + contentId)
                 .addParameter("expand", EXPAND_CONTENT);
 

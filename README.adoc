@@ -78,3 +78,7 @@
 . https://htmlcleaner.sourceforge.net/index.php[HtmlCleaner]
 
 . https://htmlcleaner.sourceforge.net/parameters.php[HtmlCleaner: Setting Behavior]
+
+. https://confluence.atlassian.com/confcloud/converting-pages-to-the-new-editor-993930226.html[Convert pages to the new editor]
+
+. https://symbl.cc/

@@ -67,6 +67,16 @@ class ConfluenceConverterTest {
         read("imagesdir is not set");
     }
 
+    @Test
+    void callouts() throws IOException {
+        read("Выноски (callouts)");
+    }
+
+    @Test
+    void lists() throws IOException {
+        read("Списки");
+    }
+
 
     private void read(String sourceFileName) throws IOException {
 

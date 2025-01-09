@@ -272,7 +272,7 @@ public class ConfluenceConverter extends StringConverter {
 
             return builder.toString();
 
-        } else if (transform.equals("olist")) {
+        } else if (transform.equals("olist") || transform.equals("colist")) {
 
             List list = (List) node;
 
@@ -319,7 +319,7 @@ public class ConfluenceConverter extends StringConverter {
                     .ifPresent(builder::append);
 
             builder.append("<ac:plain-text-body>");
-            builder.append("<![CDATA[").append(block.getSource()).append("]]>");
+            builder.append("<![CDATA[").append(replaceCalloutSymbols(block.getSource())).append("]]>");
             builder.append("</ac:plain-text-body>");
 
             builder.append("</ac:structured-macro>");
@@ -332,6 +332,49 @@ public class ConfluenceConverter extends StringConverter {
         }
 
         return null;
+    }
+
+
+    private static final Pattern PATTERN_CALLOUTS = Pattern.compile("(<\\d+>\\s*)+$", Pattern.MULTILINE);
+    private static final Pattern PATTERN_CALLOUT = Pattern.compile("<(\\d+)>");
+
+    private static final Map<String, String> CALLOUTS = Map.ofEntries(
+            Map.entry("1", "❶"),
+            Map.entry("2", "❷"),
+            Map.entry("3", "❸"),
+            Map.entry("4", "❹"),
+            Map.entry("5", "❺"),
+            Map.entry("6", "❻"),
+            Map.entry("7", "❼"),
+            Map.entry("8", "❽"),
+            Map.entry("9", "❾"),
+            Map.entry("10", "❿"),
+            Map.entry("11", "⓫"),
+            Map.entry("12", "⓬"),
+            Map.entry("13", "⓭"),
+            Map.entry("14", "⓮"),
+            Map.entry("15", "⓯"),
+            Map.entry("16", "⓰"),
+            Map.entry("17", "⓱"),
+            Map.entry("18", "⓲"),
+            Map.entry("19", "⓳"),
+            Map.entry("20", "⓴")
+    );
+
+    private String replaceCalloutSymbols(String source) {
+
+        StringBuilder result = new StringBuilder();
+        Matcher matcher = PATTERN_CALLOUTS.matcher(source);
+
+        while (matcher.find()) {
+            String replacement = PATTERN_CALLOUT
+                    .matcher(matcher.group())
+                    .replaceAll(match -> CALLOUTS.getOrDefault(match.group(1), "🯄"));
+            matcher.appendReplacement(result, replacement);
+        }
+
+        matcher.appendTail(result);
+        return result.toString();
     }
 
     private String formatParagraph(String text) {

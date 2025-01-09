@@ -7,7 +7,7 @@
     <parent>
         <artifactId>cop</artifactId>
         <groupId>ru.kbakaras.cop</groupId>
-        <version>0.2.6</version>
+        <version>0.2.7</version>
     </parent>
 
     <artifactId>cop-app</artifactId>

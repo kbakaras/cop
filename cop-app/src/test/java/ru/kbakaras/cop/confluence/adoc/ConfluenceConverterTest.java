@@ -77,6 +77,11 @@ class ConfluenceConverterTest {
         read("Списки");
     }
 
+    @Test
+    void descriptionLis() throws IOException {
+        read("Description list");
+    }
+
 
     private void read(String sourceFileName) throws IOException {
 

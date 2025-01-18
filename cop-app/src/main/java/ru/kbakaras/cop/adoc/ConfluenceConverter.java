@@ -250,7 +250,7 @@ public class ConfluenceConverter extends StringConverter {
             for (DescriptionListEntry entry : dlist.getItems()) {
                 builder.append("<p>")
                         .append("<strong>")
-                        .append(entry.getTerms().get(0).getText())
+                        .append(entry.getTerms().stream().map(ListItem::getText).collect(Collectors.joining("<br/>")))
                         .append("</strong>")
                         .append("</p>")
                         .append(entry.getDescription().convert());

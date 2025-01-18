@@ -101,7 +101,7 @@ public class ConfluenceConverter extends StringConverter {
                 case "link":
                 case "xref":
                     String refText = Optional.ofNullable(phrase.getReftext()).orElse(phrase.getTarget());
-                    return "<a href='" + phrase.getTarget() + "'>" + refText + "</a>";
+                    return "<a href='" + link(phrase.getTarget()) + "'>" + refText + "</a>";
                 case "line":
                     return phrase.getText() + "<br/>";
                 default:
@@ -433,6 +433,17 @@ public class ConfluenceConverter extends StringConverter {
         return String.format("<ac:structured-macro ac:name='%s' ac:schema-version='1' ac:macro-id='%s'>" +
                 "<ac:rich-text-body>%s</ac:rich-text-body>" +
                 "</ac:structured-macro>", "note", macroId, disclaimer);
+    }
+
+    /**
+     * В случае, если ссылка является локальной внутри документа, метод добавит префикс {@literal [inlineExtension]}.
+     * Без этого префикса ссылка может не работать в Confluence.
+     */
+    private static String link(String link) {
+
+        return link.startsWith("#")
+                ? "#%5BinlineExtension%5D" + link.substring(1)
+                : link;
     }
 
     private static String anchor(String anchorId) {

@@ -24,7 +24,9 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
 import java.util.UUID;
+import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -100,8 +102,7 @@ public class ConfluenceConverter extends StringConverter {
                     return "<code>" + phrase.getText() + "</code>";
                 case "link":
                 case "xref":
-                    String refText = Optional.ofNullable(phrase.getReftext()).orElse(phrase.getTarget());
-                    return "<a href='" + link(phrase.getTarget()) + "'>" + refText + "</a>";
+                    return link(phrase);
                 case "line":
                     return phrase.getText() + "<br/>";
                 default:
@@ -435,15 +436,73 @@ public class ConfluenceConverter extends StringConverter {
                 "</ac:structured-macro>", "note", macroId, disclaimer);
     }
 
-    /**
-     * В случае, если ссылка является локальной внутри документа, метод добавит префикс {@literal [inlineExtension]}.
-     * Без этого префикса ссылка может не работать в Confluence.
-     */
-    private static String link(String link) {
 
-        return link.startsWith("#")
-                ? "#%5BinlineExtension%5D" + link.substring(1)
-                : link;
+    private final Supplier<UUID> uuidSupplier = new Supplier<>() {
+
+        private final Random random = new Random(68541645);
+
+        @Override
+        public UUID get() {
+
+            byte[] data = new byte[16];
+            random.nextBytes(data);
+
+            data[6]  &= (byte) 0x0f;  /* clear version        */
+            data[6]  |= (byte) 0x40;  /* set to version 4     */
+            data[8]  &= (byte) 0x3f;  /* clear variant        */
+            data[8]  |= (byte) 0x80;  /* set to IETF variant  */
+
+            long msb = 0;
+            long lsb = 0;
+            for (int i = 0; i < 8; i++) {
+                msb = (msb << 8) | (data[i] & 0xff);
+            }
+            for (int i = 8; i < 16; i++) {
+                lsb = (lsb << 8) | (data[i] & 0xff);
+            }
+
+            return new UUID(msb, lsb);
+        }
+    };
+
+    private String link(PhraseNode phrase) {
+
+        String target = phrase.getTarget();
+
+        // В случае, если ссылка является локальной внутри документа, добавим префикс {@literal [inlineExtension]}.
+        // Без этого префикса ссылка может не работать в Confluence.
+        if (target.startsWith("#")) {
+            return href(phrase, "#%5BinlineExtension%5D" + target.substring(1));
+        }
+
+        Optional<String> url = Optional.ofNullable((String) phrase.getDocument().getAttribute("jira-url"));
+        if (url.isPresent() && target.startsWith(url.get())) {
+            Pattern pattern = Pattern.compile(url.get() + "(.*)");
+            Matcher matcher = pattern.matcher(target);
+            if (matcher.matches()) {
+                String macroId = new UUIDComposer(uuidSupplier.get())
+                        .compose(UUID.nameUUIDFromBytes(matcher.group(1).getBytes())).toString();
+                String serverId = Optional
+                        .ofNullable((String) phrase.getDocument().getAttribute("jira-server-id"))
+                        .orElseThrow(() -> new IllegalArgumentException("Attribute `jira-server-id` is not provided"));
+                String server = Optional
+                        .ofNullable((String) phrase.getDocument().getAttribute("jira-server"))
+                        .orElseThrow(() -> new IllegalArgumentException("Attribute `jira-server` is not provided"));
+
+                return "<ac:structured-macro ac:name='jira' ac:schema-version='1' ac:macro-id='" + macroId + "'>" +
+                        "<ac:parameter ac:name='server'>" + server + "</ac:parameter>" +
+                        "<ac:parameter ac:name='serverId'>" + serverId + "</ac:parameter>" +
+                        "<ac:parameter ac:name='key'>" + matcher.group(1) + "</ac:parameter>" +
+                        "</ac:structured-macro>";
+            }
+        }
+
+        return href(phrase, phrase.getTarget());
+    }
+
+    private String href(PhraseNode phrase, String target) {
+        String refText = Optional.ofNullable(phrase.getReftext()).orElse(phrase.getTarget());
+        return "<a href='" + target + "'>" + refText + "</a>";
     }
 
     private static String anchor(String anchorId) {

@@ -1,0 +1,9 @@
+:jira-url: https://mana.atlassian.net/browse/
+:jira-server: System Jira
+:jira-server-id: a74c6e40-95c9-4774-be21-e8cead1db6f5
+
+= Jira
+
+== Полезные ссылки
+
+* https://mana.atlassian.net/browse/MN-77733

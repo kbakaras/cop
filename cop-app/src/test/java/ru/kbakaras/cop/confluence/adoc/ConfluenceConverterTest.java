@@ -82,6 +82,11 @@ class ConfluenceConverterTest {
         read("Description list");
     }
 
+    @Test
+    void jira() throws IOException {
+        read("Jira");
+    }
+
 
     private void read(String sourceFileName) throws IOException {
 

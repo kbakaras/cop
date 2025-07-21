@@ -11,14 +11,14 @@ class ConversionTest {
     @Test
     void formatWidth_CorrectIntValue_CorrectString() {
 
-        Assertions.assertEquals("width: 22.0%; ", formatWidth(22));
+        Assertions.assertEquals("width: 22.0px; ", formatWidth(22));
     }
 
     @Test
     void formatWidth_CorrectStringValue_CorrectString() {
 
-        Assertions.assertEquals("width: 23.0%; ", formatWidth("23"));
-        Assertions.assertEquals("width: 24.0%; ", formatWidth("24%"));
+        Assertions.assertEquals("width: 23.0px; ", formatWidth("23"));
+        Assertions.assertEquals("width: 24.0px; ", formatWidth("24%"));
     }
 
 

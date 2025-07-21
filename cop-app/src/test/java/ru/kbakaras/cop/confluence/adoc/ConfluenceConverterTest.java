@@ -87,6 +87,11 @@ class ConfluenceConverterTest {
         read("Jira");
     }
 
+    @Test
+    void exampleExpandable() throws IOException {
+        read("Example to expandable");
+    }
+
 
     private void read(String sourceFileName) throws IOException {
 

@@ -188,6 +188,11 @@ public class ConfluenceConverter extends StringConverter {
 
             return ((StructuralNode) node).getContent().toString();
 
+        } else if ("example".equals(transform)) {
+
+            Block block = (Block) node;
+            return expandable((String) block.getAttribute("title"), block.getContent().toString());
+
         } else if ("admonition".equals(transform)) {
             Block block = (Block) node;
 
@@ -532,6 +537,24 @@ public class ConfluenceConverter extends StringConverter {
                 "</ac:structured-macro>" +
                 "</ac:rich-text-body>" +
                 "</ac:structured-macro>";
+    }
+
+    private static String expandable(String expandTitle, String content) {
+
+        if (expandTitle != null) {
+            UUID uuidExpand = UUID.nameUUIDFromBytes(expandTitle.getBytes());
+
+            return "<ac:structured-macro ac:name='expand' ac:schema-version='1' ac:macro-id='" + uuidExpand + "'>"
+                    + "<ac:parameter ac:name='title'>" + expandTitle + "</ac:parameter>"
+                    + "<ac:rich-text-body>"
+                    + content
+                    + "</ac:rich-text-body>"
+                    + "</ac:structured-macro>";
+
+        } else {
+            log.warn("Для разворачивания не указан заголовок, содержимое будет добавлено без разворачивания");
+            return content;
+        }
     }
 
     private static String formatWidth(int width) {

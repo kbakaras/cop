@@ -228,7 +228,12 @@ public class ConfluenceConverter extends StringConverter {
                     .append("<ac:image");
 
             Optional.ofNullable(block.getAttribute("align"))
+                    .or(() -> Optional.ofNullable(block.getAttribute("float")))
                     .ifPresent(align -> imageBuilder.append(" ac:align='").append(align).append("'"));
+
+            Optional.ofNullable(block.getAttribute("float"))
+                    .map(value -> "wrap-" + value)
+                    .ifPresent(layout -> imageBuilder.append(" ac:layout='").append(layout).append("'"));
 
             Optional.ofNullable(block.getAttribute("width"))
                     .ifPresent(width -> imageBuilder.append(" ac:width='").append(width).append("'"));

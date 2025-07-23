@@ -92,6 +92,11 @@ class ConfluenceConverterTest {
         read("Example to expandable");
     }
 
+    @Test
+    void floatImage() throws IOException {
+        read("Float image");
+    }
+
 
     private void read(String sourceFileName) throws IOException {
 

@@ -47,7 +47,8 @@ import java.util.concurrent.Callable;
         showDefaultValues = true,
         subcommands = {
                 PublishCommand.class,
-                UpdateCommand.class
+                UpdateCommand.class,
+                SourceCommand.class
         })
 public class ConfluencePublisher implements Callable<Integer> {
 

@@ -41,7 +41,7 @@ import java.util.concurrent.Callable;
 
 @CommandLine.Command(
         name = "Confluence Publisher",
-        version = "0.0.1",
+        versionProvider = VersionProvider.class,
         mixinStandardHelpOptions = true,
         sortOptions = false,
         showDefaultValues = true,
